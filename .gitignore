@@ -1,0 +1,11 @@
+.*~
+*.aux
+*.blg
+*.upb
+*.bcf
+*.upa
+*.bbl
+*.log
+*.out
+*.pdf
+.*.swp

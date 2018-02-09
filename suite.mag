@@ -1,0 +1,51 @@
+clear;
+SetViMode(true);
+load "lairez.mag"; // lairezPeriods
+load "periodBundle.mag";
+//load "~/git-projects/periods/periods.mag";
+//load "~/git-projects/periods/initialConditions.mag";
+
+QQ:=Rationals();
+ZZ:=Integers();
+
+function randomHomPoly(ring,deg : coefSize:=10, sparse:=0)
+
+mons:=MonomialsOfDegree(ring,deg);
+
+if sparse gt 0 then
+  mons:=IndexedSetToSet(MonomialsOfDegree(ring,deg));
+  mons:=SetToSequence(RandomSubset(mons,sparse));
+end if;
+
+return &+[Random([-coefSize..coefSize])*mon : mon in mons];
+end function;
+
+function smoothPlaneCurve(deg : sparse:=5)
+  P<x,y,z>:=PolynomialRing(QQ,3);
+  repeat
+    f:=randomHomPoly(P,deg : sparse:=sparse);
+  until not IsSingular(Scheme(Proj(P),f));
+  return f;
+end function;
+
+function smoothHypersurface(ring,deg : coefSize:=10, sparse:=5, verbose:=false)
+  attemptNo:=0;
+  repeat
+    f:=randomHomPoly(ring,deg : sparse:=sparse, coefSize:=coefSize);
+  if verbose then 
+    attemptNo+:=1;
+    print "Attempt number:",attemptNo;
+    print "f=",f;
+  end if;
+  until not IsSingular(Scheme(Proj(ring),f));
+  return f;
+end function;
+
+//P<x,y,z>:=PolynomialRing(QQ,3);
+
+P<x,y,z,w>:=PolynomialRing(QQ,4);
+CC<I>:=ComplexField(20);
+K<t>:=FunctionField(QQ);
+RR<D>:=PolynomialRing(K);
+
+//P<x,y,z,w,s>:=PolynomialRing(QQ,5);

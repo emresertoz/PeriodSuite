@@ -1,0 +1,105 @@
+// load period-suite
+load "suite.mag";
+
+// Generate a smooth quartic
+f:=smoothHypersurface(P,4);
+// Compute a path of deformation, compatible cohomology bases at each step, find Picard-Fuchs equations, determine initial conditions, write to a Sage readable file (current.sage)
+time pb:=periodBundle([f]);
+// Beware of the extra square brackets!
+
+//////////////////
+// Integration //
+//////////////////
+
+// Now open sage from within this folder:
+// sage --notebook=jupyter integrator.ipynb
+// hit enter on the first block for the periods
+// hit enter on the second block for the picard rank
+
+///////////////////////
+// Important options //
+///////////////////////
+
+// By default, for each deformation step, a straight path of integration is used! 
+// If you want to find another path use:
+// time pb:=periodBundle([f] : pathfinder:=true);
+
+// A deformation path is automatically computed with some basic heuristics and with randomization. It is recommended that you try a function several times to make sure you are not stuck in a highly sub-optimal path. (This can make a huge difference!)
+
+// If you find a good path of deformation, make sure to save it: 
+// favoriteDeformation:=pb[2];
+
+// Then you can re-use it like this:
+// periodBundle(favoriteDeformation);
+
+////////////
+// OUTPUT //
+////////////
+
+// The following is for information only, the user in general need not use them
+
+// pb[1] is the path of deformation
+// pb[2] is the transition matricies expressing a new cohomology basis (and the derivatives) in terms of an old cohomology basis
+// pb[3] is the initial values for the very first deformation path
+// pb[4] is the set of ODEs for each basis element of cohomology for each deformation path
+
+
+
+//////////////
+// Examples //
+//////////////
+
+
+
+// The timings refer to optimal deformation paths that were found after several attemps, if yours is taking longer kill the computation and try again to find a better path
+
+// 3s for ODEs + 40s for integration
+f:=-x^3*w + 8*x*y^2*w - y^4 + z^4 + 8*w^4;
+
+// 0.5s ODE + 20s integrate
+f:=-3*x^4 + 5*x*y*z*w - 10*y^4 + 5*z^4 - 7*z*w^3;
+// a good path
+deformation:=[
+-3*x^4 - 10*y^4 + 5*z^4 + w^4,
+-3*x^4 - 10*y^4 + 5*z^4 - 7*z*w^3 + w^4,
+-3*x^4 - 10*y^4 + 5*z^4 - 7*z*w^3,
+-3*x^4 + 5*x*y*z*w - 10*y^4 + 5*z^4 - 7*z*w^3
+];
+
+// 0.5s + 30s
+f:=10*x^3*w + 10*x*y^2*w + 8*x*w^3 - 2*y^4 + 7*z^4;
+// a good path
+deformation:=[
+x^4 - 2*y^4 + 7*z^4 + w^4,
+x^4 + 10*x^3*w - 2*y^4 + 7*z^4 + w^4,
+10*x^3*w - 2*y^4 + 7*z^4 + w^4,
+10*x^3*w + 8*x*w^3 - 2*y^4 + 7*z^4 + w^4,
+10*x^3*w + 8*x*w^3 - 2*y^4 + 7*z^4,
+10*x^3*w + 10*x*y^2*w + 8*x*w^3 - 2*y^4 + 7*z^4
+];
+
+// Hard one: illustrates the use of saving your paths! 
+f:=x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3;
+// An *extremely* rare fast path (0.5s + 24s)
+def:=[
+x^4 + 3*y^4 + z^4 + w^4,
+x^4 + 3*y^4 + z^4 - 4*z*w^3 + w^4,
+x^4 + 3*y^4 + z^4 - 4*z*w^3,
+x^4 + 3*y^4 - 5*y*z^3 + z^4 - 4*z*w^3,
+x^4 + 3*y^4 - 5*y*z^3 - 4*z*w^3,
+x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3
+];
+
+// Degree 5 example 
+
+// 3.3 s + 95s
+f:=9*x^5 - 2*x*y^4 - y^3*z^2 - 5*y*z^4 - 7*w^5;
+//
+def:=[
+9*x^5 + y^5 + z^5 - 7*w^5,
+9*x^5 + y^5 - 5*y*z^4 + z^5 - 7*w^5,
+9*x^5 + y^5 - 5*y*z^4 - 7*w^5,
+9*x^5 - 2*x*y^4 + y^5 - 5*y*z^4 - 7*w^5,
+9*x^5 - 2*x*y^4 - 5*y*z^4 - 7*w^5,
+9*x^5 - 2*x*y^4 - y^3*z^2 - 5*y*z^4 - 7*w^5
+];

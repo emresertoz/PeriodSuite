@@ -1,0 +1,32 @@
+// if you have Pierre Lairez's Period function available, set the following to: true
+lairezAvailable:=true;
+// then point the following path to his PF.spec:
+lairezFile:="~/git-projects/lairez/src/PF.spec";
+
+if lairezAvailable then 
+
+  AttachSpec(lairezFile);
+  SetVerbose("User2", true);
+  SetAssertions(2);
+
+  // F is a family of hypersurfaces
+  // form is the polynomial part of the form we want to integrate
+  function lairezPicardFuchs(F,forms)
+    R:=Parent(F);
+    K:=CoefficientRing(R);
+    A<t> := FunctionField(Rationals(), Ngens(R)); 
+    psi:=hom<K->A|t>;
+    //dehomogenize R wrt the last variable
+    gens:=[A.i : i in [2..Ngens(A)]] cat [1];
+    phi:=hom<R->A|psi,gens>;
+    return [Periods(phi(form)/phi(F)) : form in forms];
+  end function;
+else 
+  
+  function lairezPicardFuchs(F,forms)
+    Error("Lairez' PF.spec is not declared available! Please navigate to 'lairez.mag' and follow instructions.");
+    return "Error";
+  end function;
+
+end if;
+

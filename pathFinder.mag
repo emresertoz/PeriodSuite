@@ -1,0 +1,144 @@
+function squareDistance(lineSegment,pt)
+  v:=lineSegment[1];
+  w:=lineSegment[2];
+  if v eq w then
+    return (v-pt,v-pt);
+  end if;
+  t:=(w-v,pt-v)/(w-v,w-v);
+  tt:=Maximum(0,Minimum(t,1));
+  closestPoint:=v+tt*(w-v);
+  return (closestPoint-pt,closestPoint-pt);
+  //return v+tt*(w-v);
+end function;
+
+function weight(lineSegment,pts)
+  wgt:=0;
+  for pt in pts do
+    dist:=squareDistance(lineSegment,pt);
+    if dist eq 0 then
+      return -1;
+    end if;
+    wgt+:=1/dist;
+  end for;
+  return wgt;
+end function;
+
+function randomPoints(V,num : center:=(V!0), ranges:=[2: i in [1..Dimension(V)]])
+  Reals:=RealField(20);
+  F:=Field(V);
+  d:=Dimension(V);
+  return [center + V![Reals|Random([-ranges[j],ranges[j]])*Random(10^20)/10^20 : j in [1..d]] : i in [1..num]];
+end function;
+
+function addSegment(path,newPoint,avoid)
+  problem:=false;
+  if path[#path] eq newPoint then 
+    problem:=true;
+  end if;
+  newSegment:=[path[#path],newPoint];
+  wt:=weight(newSegment,avoid);
+  if wt eq -1 then 
+    problem:=true;
+  end if;
+  return Append(path,newPoint),wt,problem;
+end function;
+
+
+// avoid is a sequence of points in a 2 dimensional real vector space
+// maxsteps is the number of steps in the rectilinear path
+// output is a rectilinear path from 0 to 1 avoiding the list of points as much as possible
+function findPath(avoid,maxSteps: n:=5,N:=100)
+  V:=VectorSpace(RealField(20),2);
+  p0:=V!0;
+  p1:=V![1,0];
+  avoid:=[a : a in avoid | not ((a eq p0) or (a eq p1))];
+
+  if #avoid eq 0 then 
+    return [p0,p1], 0;
+  end if;
+
+  bestPaths:=[[p0] : i in [1..n]];
+  weights:=[Field(V)|0:i in [1..n]];
+
+  centers:=[V![i/maxSteps,0] : i in [0..maxSteps]];
+  rangex:=2/maxSteps;
+
+  if maxSteps eq 1 then
+    return [p0,p1], weight([p0,p1],avoid);
+  end if;
+
+  for step in [1..(maxSteps-1)] do
+    for i in [1..n] do
+      newPaths:=[];
+      newWeights:=[];
+      path:=bestPaths[i];
+      rps:=randomPoints(V,N : center:=centers[step],ranges:=[rangex,1]);
+      for p in rps do
+        newpath,wt,problem:=addSegment(path,p,avoid);
+        wt:=wt*(p-p1,p-p1)*maxSteps/(maxSteps-step);
+        if problem then break; end if;
+        if step eq maxSteps-1 then
+         newpath,wt2,problem:=addSegment(newpath,p1,avoid);
+         wt2:=wt2*(p-p1,p-p1)*maxSteps/(maxSteps-step);
+         wt:=wt+wt2;
+          if problem then break; end if;
+        end if;
+        Append(~newPaths,newpath);
+        Append(~newWeights,weights[i]+wt);
+      end for;
+      ParallelSort(~newWeights,~newPaths);
+      bestPaths[i]:=newPaths[1];
+      weights[i]:=newWeights[1];
+    end for;
+  end for;
+
+  // try also the straight path
+  str:=[p0,p1];
+  wt:=weight([p0,p1],avoid);
+  if not wt eq -1 then
+    Append(~weights,wt);
+    Append(~bestPaths,str);
+  end if;
+  ParallelSort(~weights,~bestPaths);
+
+  return bestPaths[1], weights[1];
+end function;
+
+function pathFinder(allODEs)
+print "\nPath finder initiated.";
+Reals:=RealField(20);
+CC:=ComplexField(10);
+V:=VectorSpace(Reals,2);
+K<t>:=FunctionField(Rationals());
+// Vieweing the univariate ring
+// as a multivariate ring is necessary
+//in order to use clear denominators function
+RR<D>:=PolynomialRing(K,1);
+multi:=hom<Parent(allODEs[1,1])->RR|RR.1>;
+allODEs:=[[multi(ode) : ode in odes] : odes in allODEs];
+
+time0 := Cputime();
+allSings:=[];
+paths:=[];
+counter:=0;
+printf "There are %o systems to navigate through.\n", #allODEs;
+for odes in allODEs do
+  counter+:=1;
+  print "Working on system number", counter;
+  sings:=[];
+  for ode in odes do
+    _,leadingTerm:=ClearDenominators(ode);
+    // get all the roots except for 0 and 1
+    sings:=sings cat [V|[Re(root[1]),Im(root[1])] : root in Roots(leadingTerm,CC) | Abs(root[1]) gt 10^(-10) and Abs(root[1]-1) gt 10^(-10)];
+  end for;
+  path:=findPath(sings,5:N:=100);
+  //path:=[CC| pt[1] + pt[2]*I : pt in path];
+  Append(~paths,path);
+  Append(~allSings,sings);
+end for;
+
+printf "It took %o seconds to find singularities of the ODEs and a rectilinear path through them.\n\n", Cputime()-time0;
+
+return paths;
+
+end function;
