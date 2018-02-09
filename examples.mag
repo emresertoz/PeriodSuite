@@ -3,9 +3,12 @@ load "suite.mag";
 
 // Generate a smooth quartic
 f:=smoothHypersurface(P,4);
+
 // Compute a path of deformation, compatible cohomology bases at each step, find Picard-Fuchs equations, determine initial conditions, write to a Sage readable file (current.sage)
 time pb:=periodBundle([f]);
 // Beware of the extra square brackets!
+
+// TIP: Do *not* settle for the first computation. Kill the computation after a few seconds and try again. You may find a superior path of deformation that way.
 
 //////////////////
 // Integration //

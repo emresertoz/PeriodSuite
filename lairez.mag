@@ -1,5 +1,5 @@
 // if you have Pierre Lairez's Period function available, set the following to: true
-lairezAvailable:=true;
+lairezAvailable:=false;
 // then point the following path to his PF.spec:
 lairezFile:="~/git-projects/lairez/src/PF.spec";
 
@@ -24,7 +24,7 @@ if lairezAvailable then
 else 
   
   function lairezPicardFuchs(F,forms)
-    Error("Lairez' PF.spec is not declared available! Please navigate to 'lairez.mag' and follow instructions.");
+    Error("\n\n Lairez's code PF.spec is not declared available! Please navigate to 'lairez.mag' and follow instructions.\n\n");
     return "Error";
   end function;
 
