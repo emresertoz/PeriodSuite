@@ -84,6 +84,7 @@ x^4 + 10*x^3*w - 2*y^4 + 7*z^4 + w^4,
 // Hard one: illustrates the use of saving your paths! 
 f:=x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3;
 // An *extremely* rare fast path (0.5s + 24s)
+// Deciding its picard rank is hard (20? or 1?)
 def:=[
 x^4 + 3*y^4 + z^4 + w^4,
 x^4 + 3*y^4 + z^4 - 4*z*w^3 + w^4,
@@ -91,6 +92,17 @@ x^4 + 3*y^4 + z^4 - 4*z*w^3,
 x^4 + 3*y^4 - 5*y*z^3 + z^4 - 4*z*w^3,
 x^4 + 3*y^4 - 5*y*z^3 - 4*z*w^3,
 x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3
+];
+
+// 0.5 s + 31 s
+// pic rk 18
+def:=[
+-4*x^4 + y^4 + z^4 + 6*w^4,
+-4*x^4 + y^4 + z^4 + 6*z^2*w^2 + 6*w^4,
+-4*x^4 + y^4 + z^4 + 2*z^3*w + 6*z^2*w^2 + 6*w^4,
+-4*x^4 + y^4 + 2*z^3*w + 6*z^2*w^2 + 6*w^4,
+-4*x^4 + 7*x*y^3 + y^4 + 2*z^3*w + 6*z^2*w^2 + 6*w^4,
+-4*x^4 + 7*x*y^3 + 2*z^3*w + 6*z^2*w^2 + 6*w^4
 ];
 
 // Degree 5 example 
