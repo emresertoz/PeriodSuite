@@ -688,7 +688,7 @@ load "pathFinder.mag";
 
 //Warning: change default filename
 //Warning: check if the input polynomials are homogeneous and smooth
-function periodBundle(path : precision:=20, straight:=false, filename:="magmaOutput", lairez:=false, onlyPeriods:=true, randomizePath:=true, pathfinder:=false) 
+function periodBundle(path : precision:=100, straight:=false, filename:="magmaOutput", lairez:=false, onlyPeriods:=true, randomizePath:=true, pathfinder:=false) 
 
   print "\nSetting up the path, cohomology bases and transition matricies...\n";
 
