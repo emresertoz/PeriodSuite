@@ -10,8 +10,8 @@ BEGIN {
 /^\#/ {abort=1; print $0; next}
 abort==1 {print "#" $0; next}
 
-# the first line is not modified
-NR==1 {print $0; next}
+# the first two lines are not modified
+NR<=2 {print $0; next}
 
 # if a sqr bracket is opened at the end
 # print the entire line

@@ -674,12 +674,12 @@ function nextStep(f,g : randomize:=false)
   end for;
 end function;
 
-function breakingPath(g : randomize:=false)
-  steps:=[bestFermat(g)];
+function breakingPath(g1 : randomize:=false, g0:=bestFermat(g1))
+  steps:=[g0];
   repeat
-    h:=nextStep(steps[#steps],g : randomize:=randomize);
+    h:=nextStep(steps[#steps],g1 : randomize:=randomize);
     Append(~steps,h);
-  until h eq g;
+  until h eq g1;
   return steps;
 end function;
 
@@ -688,7 +688,7 @@ load "pathFinder.mag";
 
 //Warning: change default filename
 //Warning: check if the input polynomials are homogeneous and smooth
-function periodBundle(path : precision:=100, straight:=false, filename:="magmaOutput", lairez:=false, onlyPeriods:=true, randomizePath:=true, pathfinder:=false) 
+function periodBundle(path : precision:=100, straight:=false, filename:="magmaOutput", lairez:=false, periodsOnly:=true, randomizePath:=true, pathfinder:=false) 
 
   print "\nSetting up the path, cohomology bases and transition matricies...\n";
 
@@ -700,7 +700,7 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
   if straight then
     path:=[bestFermat(target),target];
   elif #path eq 1 then 
-    if d-n-2 lt 0 then Error("This hypersurface has no periods"); end if;
+    if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
     path:=breakingPath(path[1] : randomize:=randomizePath); 
   end if;
 
@@ -715,7 +715,8 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
 
   if straight then
     bases:=[[mon : mon in MonomialsOfDegree(P,d-n-2)]];
-  elif onlyPeriods then
+  elif periodsOnly then
+    if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
     bases:=[*computeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-2)]*] cat [*[mon : mon in MonomialsOfDegree(P,d-n-2)]*];
   else
     bases:=[*computeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-1)]*];
@@ -769,6 +770,7 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
 
   file:=filename*".mag";
   Write(file,"geometricGenus="*Sprint(Binomial(d-1,n+1)) : Overwrite:=true);
+  Write(file,"periodsOnly="*Sprint(periodsOnly));
   Write(file,"paths="*Sprint(integrationPaths));
   Write(file,"rawInits="*Sprint(coords));
   Write(file,"inits="*Sprint(initialConditions));
