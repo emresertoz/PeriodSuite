@@ -17,7 +17,12 @@ if sparse gt 0 then
   mons:=SetToSequence(RandomSubset(mons,sparse));
 end if;
 
-return &+[Random([-coefSize..coefSize])*mon : mon in mons];
+repeat
+  p:=&+[Random([-coefSize..coefSize])*mon : mon in mons];
+until not p eq 0;
+
+return p;
+
 end function;
 
 function smoothPlaneCurve(deg : sparse:=5)

@@ -52,10 +52,9 @@ function GriffithsDwork(L,f : depth:=0)
   // to GD reduce a nested list of forms L
   function GDdeep(L,localDepth)
     if localDepth gt 0 then
-      // debug
       return [GDdeep(p,localDepth-1) : p in L];
     else
-      return GD(R!L);
+      return P!GD(R!L);
     end if;
   end function;
 
@@ -308,13 +307,13 @@ function homogenize(f)
   return &+[cof[i]*newMon[i] : i in [1..#cof]];
 end function;
 
-// works with a form of the type p*Omega/((1-t)*f0 + t*f1)
+// works with a form of the type numerator*Omega/((1-t)*f0 + t*f1)^l
 function differentiateForm(numerator,f0,f1)
   l:=(Degree(numerator)+Ngens(Parent(f0)))/Degree(f0);
   return -l*(f1-f0)*numerator;
 end function;
 
-// works with a form of the type p*Omega/((1-t)*f0 + t*f1)
+// works with a form of the type numerator*Omega/((1-t)*f0 + t*f1)^l
 function computeDerivatives(numerator,f0,f1,desiredDerivatives : withFactorial:=true)
   dervs:=[numerator];
   for i in [1..Maximum(desiredDerivatives)] do
@@ -375,7 +374,7 @@ function integrateMonomial(alpha,degree,phamBasis : type:=[], precision:=20)
   xi := Exp(2*Pi(CC)*I/d); // d-th root of unity
   prod:= &*([1] cat [ax-j*d : j in [1..(l-1)]]);
   c_dla:= (-1)^l/(Factorial(l-1) * d^l) * prod;
-  mainTerm:= (-1/d)^n*&*[(1-xi^a)* Gamma(CC!(a/d)) : a in alphaX]/Gamma(&+[CC!(a/d) : a in alphaX]);
+  mainTerm:= (-1/d)^n*&*[(1-xi^(-a))* Gamma(CC!(a/d)) : a in alphaX]/Gamma(&+[CC!(a/d) : a in alphaX]);
 
   // depending on the Fermat type we have to scale
   scl := CC!( &*[Root(type[j],d)^alpha[j] : j in [1..(#alpha-1)]] * Root(-type[#alpha],d)^alpha[#alpha])^(-1);
@@ -388,7 +387,7 @@ end function;
 
 // input:
 // dervs - a list of lists, entries are polynomials designating forms
-// fermat - the fermat curve over which we are integrating
+// type - the type of the fermat curve over which we are integrating
 // output:
 // the integral of each form over the pham cycles in the fermat curve
 function massIntegrate(dervs, deg, type : precision:=20)
@@ -414,7 +413,7 @@ end function;
 //// Part III : Processing output
 
 
-// The following three functions compare two period matricies
+// The following three functions compare two period matricies of curves
 // and finds the change of homology basis
 function prepare(M : scale:=10^10)
   nrows:=#M;
@@ -446,6 +445,7 @@ function preLLL(M,N : scale:=10^10)
 
 end function;
 
+// only intended for plane curves
 function changeHomologyBasis(M,N : scale:=10^10)
   L:=preLLL(M,N : scale:=scale);
   LL:=LLL(L);
@@ -635,7 +635,7 @@ end function;
 
 function nextStep(f,g : randomize:=false)
 
-  if not isSmooth(g) then error("Target polynomial is not smooth."); end if;
+  //if not isSmooth(g) then error("Target polynomial is not smooth."); end if;
 
   if f eq g then return g; end if;
   
@@ -688,7 +688,7 @@ load "pathFinder.mag";
 
 //Warning: change default filename
 //Warning: check if the input polynomials are homogeneous and smooth
-function periodBundle(path : precision:=100, straight:=false, filename:="magmaOutput", lairez:=false, periodsOnly:=true, randomizePath:=true, pathfinder:=false) 
+function periodBundle(path : precision:=200, straight:=false, filename:="magmaOutput", lairez:=false, periodsOnly:=true, randomizePath:=true, pathfinder:=false) 
 
   print "\nSetting up the path, cohomology bases and transition matricies...\n";
 
@@ -698,7 +698,11 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
   n:=Ngens(P)-2;
 
   if straight then
-    path:=[bestFermat(target),target];
+    if #path eq 1 then
+      path:=[bestFermat(target),target];
+    elif #path gt 2 then
+      error "A straight path is requested with a list of more than 2 polynomials";
+    end if;
   elif #path eq 1 then 
     if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
     path:=breakingPath(path[1] : randomize:=randomizePath); 
@@ -730,7 +734,6 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
 
   relevantDerivatives:=[];
   allODEs:=[];
-  requiredDers:=[];
   for i in [1..#families] do
     relDers:=[];
     print "\nWe are at family number",i,"out of",#families,"\n";
@@ -738,7 +741,6 @@ function periodBundle(path : precision:=100, straight:=false, filename:="magmaOu
     for j in [1..#odes] do
       _,required := localBasis(odes[j]);
       Append(~relDers,computeDerivatives(bases[i,j],path[i],path[i+1],required : withFactorial:=true));
-      Append(~requiredDers,required);
     end for;
     Append(~relevantDerivatives,relDers);
     Append(~allODEs,odes);

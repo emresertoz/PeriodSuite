@@ -56,6 +56,13 @@ time pb:=periodBundle([f]);
 
 // The timings refer to optimal deformation paths that were found after several attemps, if yours is taking longer kill the computation and try again to find a better path
 
+// pic 20
+// schur
+f:=x*(x^3-y^3)-z*(z^3-w^3);
+
+// 64 lines
+f:=-8*x^4 - 7*x*z^3 - y^4 + 5*y*w^3;
+
 //pic 12
 // 0.6s for ODEs + 40s for integration
 f:=-x^3*w + 8*x*y^2*w - y^4 + z^4 + 8*w^4;
@@ -115,6 +122,21 @@ def:=[
 -4*x^4 + 7*x*y^3 + 2*z^3*w + 6*z^2*w^2 + 6*w^4
 ];
 
+// 15.700s + ??
+// pic ??
+// straight path takes ~100 seconds giving an ODE of order degree (8,~130)
+// the following deformation gives ODEs with degrees less than 17
+def:=[
+x^4 + y^4 + z^4 + 7*w^4,
+x^4 - 4*x^3*y + y^4 + z^4 + 7*w^4,
+-4*x^3*y + y^4 + z^4 + 7*w^4,
+-4*x^3*y + y^4 + 2*y^3*z + z^4 + 7*w^4,
+-4*x^3*y + 2*y^3*z + z^4 + 7*w^4,
+-4*x^3*y - 9*x*z^3 + 2*y^3*z + z^4 + 7*w^4,
+-4*x^3*y - 9*x*z^3 + 2*y^3*z + 7*w^4,
+-4*x^3*y - 9*x*z^3 + 2*y^3*z + 5*y^2*z^2 + 7*w^4
+];
+
 // Degree 5 example 
 
 // 3.3 s + 95s
@@ -128,3 +150,6 @@ def:=[
 9*x^5 - 2*x*y^4 - 5*y*z^4 - 7*w^5,
 9*x^5 - 2*x*y^4 - y^3*z^2 - 5*y*z^4 - 7*w^5
 ];
+
+
+
