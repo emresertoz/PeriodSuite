@@ -27,8 +27,8 @@ function GriffithsDwork(L,f : depth:=0)
 
   // to be used only for homogeneous forms
   function GDhom(p)
-    // check if ell(p) = 1
-    if Degree(p) lt Degree(f) then 
+    // avoid division by zero
+    if ell(p) eq 1 then
       return p,0; 
     end if;
     a:=NormalForm(p,J);
@@ -66,13 +66,6 @@ end function;
 /// PicardFuchs equations  ///
 //////////////////////////////
 
-// get the monomials m such that m*Omega/f is a holo form
-function holoForms(f)
-  R:=Parent(f); 
-  forms:=MonomialsOfDegree(R,Degree(f)-Ngens(R));
-  return SetToSequence(forms);
-end function;
-
 function PicardFuchs(f,forms)
   R:=Parent(f);
   K:=CoefficientRing(R);
@@ -81,12 +74,12 @@ function PicardFuchs(f,forms)
   df := [Derivative(f,i):i in [1..numVars]];
   J := IdealWithFixedBasis(df);
 
-  ell := func<p | (Degree(p)+numVars)/Degree(f)>;
+  ell := func<p | (Degree(p)+Ngens(Parent(p)))/Degree(f)>;
 
   // to be used only for homogeneous forms
   function GDhom(p)
     // check if ell(p) = 1
-    if Degree(p) lt Degree(f) then 
+    if ell(p) eq 1 then
       return p,0; 
     end if;
     a:=NormalForm(p,J);
@@ -124,6 +117,7 @@ function PicardFuchs(f,forms)
   // The following ring is used only to store
   // the differential operators
   RR<D>:=PolynomialRing(K); 
+
   function PF(form : PFnumber:=0, TotalPFs:=0);
     reducedDerivatives:=[form];
     mons:=Monomials(reducedDerivatives[1]);
@@ -523,36 +517,35 @@ function findGoodBasis(V,K0,K1)
   repeat 
     b0:=0; b1:=0; preference:=0;
     found:=false; i:=1;
-    // each loop will
-    repeat
-    if i gt #B then 
-      error "goodBasis could not be found: this is a bug"; 
-    end if;
-    b:=B[i];
-    // if b is in neither of the kernels
-    // add b as a basis
-    if (b notin K0) and (b notin K1) then 
-    found:=true;
-    K0:=K0 + sub<V|b>;
-    K1:=K1 + sub<V|b>;
-    Append(~goodBasis,b);
-    else 
-    // otherwise, find b that is not in K0 or K1 and mark it as such
-      if (b0 eq 0) and (b notin K0) then
-        b0 := b; 
-      end if;
-      if (b1 eq 0) and (b notin K1) then
-        b1 := b; 
-      end if;
-    end if;
-    i+:=1;
-    until found;
 
+    // try to find b that is neither in K0 or K1
+    for b in B do
+      if (b notin K0) and (b notin K1) then 
+      found:=true;
+      preference:=b;
+      break;
+      end if;
+    end for;
+
+    // otherwise find b that is not in K0 or K1 and mark it as such
     if not found then
-      K0:=K0 + sub<V|b0+b1>;
-      K1:=K1 + sub<V|b0+b1>;
-      Append(~goodBasis,b0+b1);
+      for b in B do
+        if (b0 eq 0) and (b notin K0) then
+          b0 := b; 
+        end if;
+        if (b1 eq 0) and (b notin K1) then
+          b1 := b; 
+        end if;
+        if not (b0 eq 0 or b1 eq 0) then
+          preference:=b0+b1;
+          break;
+        end if;
+      end for;
     end if;
+
+    K0:=K0 + sub<V|preference>;
+    K1:=K1 + sub<V|preference>;
+    Append(~goodBasis,preference);
 
   until Dimension(K0) eq Dimension(V);
 
@@ -726,18 +719,16 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
     if #path eq 1 then
       path:=[bestFermat(target),target];
     elif #path gt 2 then
-      error "A straight path is requested with a list of more than 2 polynomials";
+      print "A straight path is requested with a list of more than 2 polynomials. Ignoring intermediate terms.";
+      path:=[path[1],path[#path]];
     end if;
   elif #path eq 1 then 
-    if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
     path:=breakingPath(path[1] : randomize:=randomizePath); 
   end if;
 
   families:=[*setupFamily(path[i],path[i+1]): i in [1..(#path-1)]*];
 
-  if straight then
-    bases:=[[mon : mon in MonomialsOfDegree(P,d-n-2)]];
-  elif periodsOnly then
+  if periodsOnly then
     if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
     bases:=[*computeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-2)]*] cat [*[mon : mon in MonomialsOfDegree(P,d-n-2)]*];
   else
@@ -764,11 +755,6 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
     print "\nWe are at family number",i,"out of",#families,"\n";
     odes:=picfuchs(families[i],bases[i]);
     for j in [1..#odes] do
-      // debug
-      print "The following family:";
-      print families[i];
-      print "has the following basis for cohomology:";
-      print bases[i];
       _,requiredDerivatives := localBasis(odes[j]);
       Append(~relDers,computeDerivatives(bases[i,j],path[i],path[i+1],requiredDerivatives : withFactorial:=true));
     end for;
@@ -776,8 +762,9 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
     Append(~allODEs,odes);
   end for;
 
-  // integrate only the first batch!
+  // the initial conditions for the first family
   initialConditions:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
+  // the change of coordinates necessary to setup initial conditions for later families
   coords:=[];
   for i in [2..#families] do
     coord:=coordinatesInCohomology(path[i],bases[i-1],relevantDerivatives[i]);
@@ -810,6 +797,8 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
   Write(file,"#deformationPath:="*Sprint(path));
 
   System("$(which awk) -f convert.awk "*file*" > current.sage");
+
+  Write("current.sage","periodsOnly="*Sprint(periodsOnly));
 
 
 pathMons:=[#Monomials(p) : p in path];
