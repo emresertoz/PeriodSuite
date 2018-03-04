@@ -489,14 +489,25 @@ function localBasis(ode)
     error "Indicial polynomial does not factor into linear terms";
   end if;
 
-  exps:=[Integers() | -Coefficient(fact,0) : fact in facts];
+  // the roots of the inidical polynomial
+  exps:=[-Coefficient(fact,0) : fact in facts];
+  // they should be positive integers
+  check:=&and[IsCoercible(Integers(),e) and (e ge 0) : e in exps];
+  if check then
+    exps:=[Integers()| e : e in exps];
+  else
+    print ode;
+    print exps;
+    error "Indicial polynomial does not have positive integral roots";
+  end if;
+
   return Reverse([ (K.1)^e : e in exps]), Reverse(exps); 
 end function;
 
 // input: K0, K1 two equi-dimensional subspaces of V
 // output: 
-// a 'simple' set of vectors, a subset of Basis(V) if possible
-// generating V/K0 and V/K1
+// a 'simple' set of vectors generating V/K0 and V/K1
+// simple means: either a basis of V or a sum of two basis elements of V
 function findGoodBasis(V,K0,K1)
   if not (Dimension(K1) eq Dimension(K0)) then
     error "findGoodBasis can not be used with this input: quotients of different dimension"; 
@@ -508,34 +519,46 @@ function findGoodBasis(V,K0,K1)
 
   B:=Basis(V);
   goodBasis:=[];
-  repeat 
-    
-    b0:=0; b1:=0; preference:=0;
-    for b in B do
-      if (b0 eq 0) then
-        if (b in K0) and (b notin K1) then b0 := b; end if;
-      end if;
-      if (b1 eq 0) then
-        if (b in K1) and (b notin K0) then b1 := b; end if;
-      end if;
-      if (preference eq 0) then
-        if (b notin K0) and (b notin K1) then 
-        preference:=b; 
-        K0:=K0 + sub<V|preference>;
-        K1:=K1 + sub<V|preference>;
-        Append(~goodBasis,preference);
-        end if;
-      end if;
-    end for;
 
-    if preference eq 0 then
-      preference:=b0+b1; 
-      K0:=K0 + sub<V|preference>;
-      K1:=K1 + sub<V|preference>;
-      Append(~goodBasis,preference);
+  repeat 
+    b0:=0; b1:=0; preference:=0;
+    found:=false; i:=1;
+    // each loop will
+    repeat
+    if i gt #B then 
+      error "goodBasis could not be found: this is a bug"; 
+    end if;
+    b:=B[i];
+    // if b is in neither of the kernels
+    // add b as a basis
+    if (b notin K0) and (b notin K1) then 
+    found:=true;
+    K0:=K0 + sub<V|b>;
+    K1:=K1 + sub<V|b>;
+    Append(~goodBasis,b);
+    else 
+    // otherwise, find b that is not in K0 or K1 and mark it as such
+      if (b0 eq 0) and (b notin K0) then
+        b0 := b; 
+      end if;
+      if (b1 eq 0) and (b notin K1) then
+        b1 := b; 
+      end if;
+    end if;
+    i+:=1;
+    until found;
+
+    if not found then
+      K0:=K0 + sub<V|b0+b1>;
+      K1:=K1 + sub<V|b0+b1>;
+      Append(~goodBasis,b0+b1);
     end if;
 
   until Dimension(K0) eq Dimension(V);
+
+  if not Dimension(K0) eq Dimension(K1) then
+    error "a bug in goodBasis";
+  end if;
 
   return goodBasis;
 
@@ -543,42 +566,44 @@ end function;
 
 // find a basis for cohomology compatible for both f0 and f1
 function computeCohomologyBasis(f0,f1)
+  d:=Degree(f0);
   P:=Parent(f0);
   Q:=CoefficientRing(P);
   f1:=P!f1;
+  
+  // setting up the quotient maps to jacobi rings
+  psis:=[**];
+  for f in [f0,f1] do
+    J:=Ideal([Derivative(f,i) : i in [1..Ngens(P)]]);
+    assert 1 in Saturation(J); // f is smooth
+    A:=quo<P|J>;
+    V,psi:=VectorSpace(A);
+    Append(~psis,psi);
+  end for;
 
-  if not (IsNonsingular(Scheme(Proj(P),f0)) and IsNonsingular(Scheme(Proj(P),f1))) then 
-    error "computeCohomologyBasis: both hypersurfaces need to be smooth"; 
-  end if; 
-
-  nablaf0:=[Derivative(f0,i) : i in [1..Ngens(P)]];
-  nablaf1:=[Derivative(f1,i) : i in [1..Ngens(P)]];
-  J0:=Ideal(nablaf0);
-  J1:=Ideal(nablaf1);
-
-  d:=Degree(f0);
+  // first setup the holomorphic forms
   if d lt Ngens(P) then
     basis := [];
   else
     basis:=[mon : mon in MonomialsOfDegree(P,d-Ngens(P))];
   end if;
-
-  for l in [2..(Ngens(P)-1)] do
+  
+  // admissable pole orders
+  poles:=[l : l in [2..(Ngens(P)-1)] | l*d-Ngens(P) ge 0];
+  // now find a basis of forms with higer pole order
+  for l in poles do
     m:=l*d-Ngens(P);
-    if m gt 0 then
-    L:=LinearSystem(Proj(P),m);
-      if m lt d-1 then
-        W0:=[0]; W1:=[0];
-      else 
-        W0:=[mon*der : mon in MonomialsOfDegree(P,m-d+1), der in nablaf0];
-        W1:=[mon*der : mon in MonomialsOfDegree(P,m-d+1), der in nablaf1];
-      end if;
-    V:=CoefficientSpace(L);
-    mu:=CoefficientMap(L);
-    nu:=PolynomialMap(L);
-    K0:=sub<V|mu(W0)>; K1:=sub<V|mu(W1)>;
-    basis := basis cat [P|nu(b) : b in findGoodBasis(V,K0,K1)];
-    end if;
+    mons:=Setseq(MonomialsOfDegree(P,m));
+    U:=VectorSpace(Rationals(),#mons);
+    W:=[];
+    // compute the two kernels from U to the Jacobi ring
+    for psi in psis do
+      mu:=hom<U->Codomain(psi)|[psi(m) : m in mons]>;
+      Append(~W,Kernel(mu));
+    end for;
+    // find a simple basis of U which generates both quotient spaces
+    // U/W[1] and U/W[2]
+    basis := basis cat [P|&+[b[i]*mons[i]:i in [1..#mons]] : b in findGoodBasis(U,W[1],W[2])];
   end for;
 
   return basis;
@@ -708,13 +733,6 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
     path:=breakingPath(path[1] : randomize:=randomizePath); 
   end if;
 
-  pathMons:=[#Monomials(p) : p in path];
-  pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-
-  print "Using the following path:",path;
-  print "The number of monomials appearing at each step:\n",pathMons;
-  print "The number of monomials that are changed at each step:\n",pathMonsChange;
-
   families:=[*setupFamily(path[i],path[i+1]): i in [1..(#path-1)]*];
 
   if straight then
@@ -732,6 +750,13 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
     picfuchs:=PicardFuchs;
   end if;
 
+pathMons:=[#Monomials(p) : p in path];
+pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
+
+print "Using the following path:",path;
+print "The number of monomials appearing at each step:\n",pathMons;
+print "The number of monomials that are changed at each step:\n",pathMonsChange;
+
   relevantDerivatives:=[];
   allODEs:=[];
   for i in [1..#families] do
@@ -739,8 +764,13 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
     print "\nWe are at family number",i,"out of",#families,"\n";
     odes:=picfuchs(families[i],bases[i]);
     for j in [1..#odes] do
-      _,required := localBasis(odes[j]);
-      Append(~relDers,computeDerivatives(bases[i,j],path[i],path[i+1],required : withFactorial:=true));
+      // debug
+      print "The following family:";
+      print families[i];
+      print "has the following basis for cohomology:";
+      print bases[i];
+      _,requiredDerivatives := localBasis(odes[j]);
+      Append(~relDers,computeDerivatives(bases[i,j],path[i],path[i+1],requiredDerivatives : withFactorial:=true));
     end for;
     Append(~relevantDerivatives,relDers);
     Append(~allODEs,odes);
@@ -780,6 +810,15 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
   Write(file,"#deformationPath:="*Sprint(path));
 
   System("$(which awk) -f convert.awk "*file*" > current.sage");
+
+
+pathMons:=[#Monomials(p) : p in path];
+pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
+
+print "Used the following path:",path;
+print "The number of monomials appearing at each step:\n",pathMons;
+print "The number of monomials that are changed at each step:\n",pathMonsChange;
+
   
   return [*path,coords,initialConditions,allODEs*];
 end function;
@@ -801,4 +840,25 @@ function analytics(allODEs);
     Append(~res,subres);
   end for;
   return res;
+end function;
+
+// input: f0,f1 two hom polys of same degree
+// output: the values of t for which the hypersurface (1-t)*f0+t*f1 is singular
+// assuming general fiber is smooth
+function singularFibersOfPencil(f0,f1:KK:=ComplexField(20))
+  P:=Parent(f0);
+  R<t>:=PolynomialRing(Rationals(),Ngens(P)+1,"elim",1);
+  inc:=hom<P->R|[R.i : i in [2..Ngens(R)]]>;
+  F:=(1-t)*inc(f0)+t*inc(f1);
+  I:=ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
+  J:=ideal<R|[R.i : i in [2..Ngens(R)]]>;
+  IJ:=Saturation(I,J);
+  gb:=GroebnerBasis(IJ);
+  polys:=[p : p in gb | IsUnivariate(p,t)];
+  rts:=[KK|];
+  for p in polys do
+    _,h:=IsUnivariate(p);
+    rts:=rts cat [r[1] : r in Roots(h,KK)];
+  end for;
+  return rts;
 end function;
