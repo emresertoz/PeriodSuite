@@ -152,4 +152,9 @@ def:=[
 ];
 
 
-
+// Curve of high genus
+load "suite.mag";
+P<x,y,z>:=PolynomialRing(Rationals(),3);
+u:=20;
+f:=x^(3*u)+y^(3*u)+z^(3*u)+x^u*y^u*z^u;
+time pb:=periodBundle([f]:precision:=1);

@@ -121,7 +121,7 @@ function PicardFuchs(f,forms)
   function PF(form : PFnumber:=0, TotalPFs:=0);
     reducedDerivatives:=[form];
     mons:=Monomials(reducedDerivatives[1]);
-    print "Computing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs;
+    print "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,"\n";
     tstart:=Cputime();
     t2:="null";
     stopLoop:=false;
@@ -208,7 +208,7 @@ end function;
 // f1 is a homogenous polynomial over QQ
 // we turn it into a family deforming from fermat of desired type
 // unless f0 is specified
-function setupFamily(f0,f1)
+function SetupFamily(f0,f1)
   R:=Parent(f0); 
   Q:=CoefficientRing(R);
   K<t>:=FunctionField(Q);
@@ -220,7 +220,7 @@ end function;
 // f1 is a homogenous polynomial over QQ
 // we turn it into a family deforming from fermat of desired type
 // unless f0 is specified
-//function setupFamily(f1: type :=[], f0:=0)
+//function SetupFamily(f1: type :=[], f0:=0)
 //  QQ:=RationalField();
 //  K<t>:=FunctionField(QQ);
 //  N:=Ngens(Parent(f1));
@@ -321,13 +321,6 @@ function computeDerivatives(numerator,f0,f1,desiredDerivatives : withFactorial:=
 end function;
 
 
-// intersection matrix for pham cycles
-forward cap;
-function intersectionMatrix(n,d)
-  B := PhamBasis(n,d);
-  return [[cap(beta1,beta2,d) : beta2 in B] : beta1 in B];
-end function;
-
 //helper function
 // b in [0..d-1]
 function ee(b)
@@ -348,6 +341,17 @@ function cap(beta1,beta2,d)
   beta := [ (beta2[i] - beta1[i]) mod d : i in [1..(N-1)]];
   betaShift := [ (b+1) mod d : b in beta];
   return (-1)^(Integers()!((N-2)*(N-1)/2)) * (&*[ee(b) : b in beta] - &*[ee(b) : b in betaShift]);
+end function;
+
+// intersection matrix for pham cycles
+function PhamIntersectionMatrix(n,d)
+  B := PhamBasis(n,d);
+  return [[cap(beta1,beta2,d) : beta2 in B] : beta1 in B];
+end function;
+
+// intersection matrix for pham cycles, from basis
+function PhamIntersectionMatrixFromBasis(B,d)
+  return [[cap(beta1,beta2,d) : beta2 in B] : beta1 in B];
 end function;
 
 function integrateMonomial(alpha,degree,phamBasis : type:=[], precision:=20)
@@ -371,11 +375,62 @@ function integrateMonomial(alpha,degree,phamBasis : type:=[], precision:=20)
   mainTerm:= (-1/d)^n*&*[(1-xi^(-a))* Gamma(CC!(a/d)) : a in alphaX]/Gamma(&+[CC!(a/d) : a in alphaX]);
 
   // depending on the Fermat type we have to scale
-  scl := CC!( &*[Root(type[j],d)^alpha[j] : j in [1..(#alpha-1)]] * Root(-type[#alpha],d)^alpha[#alpha])^(-1);
+  scl := 1/( &*[Root(CC!type[j],d)^alpha[j] : j in [1..(#alpha-1)]] * Root(CC!-type[#alpha],d)^alpha[#alpha]);
 
   dotProd:=func<beta |&+[alpha[j]*beta[j] : j in [1..(n+1)]]>;
 
   return [scl*c_dla*xi^dotProd(beta)*mainTerm : beta in phamBasis];
+
+end function;
+
+
+// optimized for very high genus curves, but rendered unreadable
+// please look at integrateMonomial for a readable version
+function integrateMonomials(alphas,degree,phamBasis : type:=[], precision:=20)
+  d:=degree;
+  n:=#(alphas[1])-2;
+  if #type eq 0 then 
+    type := Append([1 : i in [1..(n+1)]],-1); 
+  end if;
+  CC<I>:=ComplexField(precision);
+  AssignNames(~CC,["I"]);
+  xi := Exp(2*Pi(CC)*I/d); // d-th root of unity
+  rootsOfType:=[Root(CC!type[i],d) : i in [1..(#type-1)]] cat [Root(CC!(-type[#type]),d)];
+
+
+  // setting up the "empty" list
+  integrals:=[[CC|0 : beta in phamBasis] : alpha in alphas];
+  // store computed gamma values for efficiency
+  gammaValues:=[CC|0 : i in [1..5000]];
+  for u in [1..#alphas] do
+    // debug 
+    printf "\nIntegrating monomial number %o out of %o", u, #alphas;
+    alpha:=alphas[u];
+    l:=Integers()!((&+alpha)/d);
+    // Default to the standard fermat type
+    alphaX := alpha[1..(n+1)];
+    ax:=alpha[n+2];
+
+    prod:= &*([1] cat [ax-j*d : j in [1..(l-1)]]);
+    c_dla:= (-1)^l/(Factorial(l-1) * d^l) * prod;
+
+    vals:=alphaX cat [&+[a : a in alphaX]];
+    for a in vals do
+      if (not IsDefined(gammaValues,a)) or (gammaValues[a] eq 0) then
+        gammaValues[a]:=Gamma(CC!(a/d));
+      end if;
+    end for;
+
+    mainTerm:= (-1/d)^n*&*[(1-xi^(-a))*gammaValues[a] : a in alphaX]/gammaValues[&+[a : a in alphaX]];
+
+    // depending on the Fermat type we have to scale
+    scl := 1/( &*[rootsOfType[j]^alpha[j] : j in [1..#alpha]]);
+    dotProd:=func<beta |&+[alpha[j]*beta[j] : j in [1..(n+1)]]>;
+
+    integrals[u]:=[scl*c_dla*xi^dotProd(beta)*mainTerm : beta in phamBasis];
+  end for;
+
+  return integrals;
 
 end function;
 
@@ -392,16 +447,33 @@ function massIntegrate(dervs, deg, type : precision:=20)
   mons:=Setseq(Seqset(&cat[Monomials(form) : form in &cat(dervs)]));
   alphas:=[[i+1: i in Exponents(m)] : m in mons];
 
+  // DEBUG debug debug -- until end of function
+  print "Constructing a Pham basis and its intersection matrix.";
   phamBasis:=PhamBasis(n,deg);
   CC<I>:=ComplexField(precision);
+  intmat:=PhamIntersectionMatrixFromBasis(phamBasis,deg);
+  print "Construction complete";
   V:=RSpace(CC,#phamBasis);
-  integrals:=[V|integrateMonomial(alpha,deg,phamBasis : type:=type,precision:=precision) : alpha in alphas];
+  integrals:=integrateMonomials(alphas,deg,phamBasis : type:=type,precision:=precision);
+  //integrals:=[V|integrateMonomial(alpha,deg,phamBasis : type:=type,precision:=precision) : alpha in alphas];
+  print "\nIntegrated monomials.";
+  integrals:=[V| period : period in integrals];
+  print "Converted the integrals to vectors.";
 
-  function integrateForm(form)
-    return Coordinates(V,&+[MonomialCoefficient(form,mons[i])*integrals[i]  : i in [1..#mons]]);
-  end function;
+  //function integrateForm(form)
+  //  return Coordinates(V,&+[MonomialCoefficient(form,mons[i])*integrals[i]  : i in [1..#mons]]);
+  //end function;
+  print "Now adding the integrals of monomials for each polynomial.";
+  result:=[[[] : u in derv ] : derv in dervs];
+  for j in [1..#dervs] do
+    printf "\nPutting together monomial integrals of form %o in %o", j, #dervs;
+    for i in [1..#(dervs[j])] do
+      indexSet:=[Index(mons,m) : m in Monomials(dervs[j,i])];
+      result[j,i]:=Coordinates(V,&+[MonomialCoefficient(dervs[j,i],mons[mm])*integrals[mm]  : mm in indexSet]);
+    end for;
+  end for;
   
-  return [[ integrateForm(form) : form in dervs[j]] : j in [1..#dervs]];
+  return result,intmat;
 end function;
 
 //// Part III : Processing output
@@ -417,7 +489,7 @@ function prepare(M : scale:=10^10)
     if (i mod 2) eq 0 then return Im(M[ii,j]);
     else return Real(M[ii,j]); end if;
   end function;
-  return [[Round(scale * realOrImaginary(i,j)) : j in [1..ncols] ] : i in [1..ncols]];
+  return [[Round(scale * realOrImaginary(i,j)) : j in [1..ncols] ] : i in [1..(2*nrows)]];
 end function;
 
 function preLLL(M,N : scale:=10^10)
@@ -440,8 +512,8 @@ function preLLL(M,N : scale:=10^10)
 end function;
 
 // only intended for plane curves
-function changeHomologyBasis(M,N : scale:=10^10)
-  L:=preLLL(M,N : scale:=scale);
+function ChangeHomologyBasis(M,N : scale:=10^20)
+  L:=preLLL(M,N : scale:=scale/2);
   LL:=LLL(L);
   s:=Integers()!(Nrows(LL)/2);
   B1:=Transpose(ExtractBlock(LL,1,s+1,s,s));
@@ -453,7 +525,7 @@ function changeHomologyBasis(M,N : scale:=10^10)
   ZB:=Matrix([[Round(b[i,j]) : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
   B:=Matrix([[F|ZB[i,j] : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
   errorRing<I>:=ComplexField(1);
-  allErrors:=ElementToSequence(ChangeRing(Matrix(M) - Matrix(N)*B,errorRing));
+  allErrors:=ElementToSequence(ChangeRing(scale*(Matrix(M) - Matrix(N))*B,errorRing));
   maximumError:=SquareRoot(Maximum([Norm(e): e in allErrors]));
   return ZB,maximumError,B;
 end function;
@@ -558,7 +630,7 @@ function findGoodBasis(V,K0,K1)
 end function;
 
 // find a basis for cohomology compatible for both f0 and f1
-function computeCohomologyBasis(f0,f1)
+function ComputeCohomologyBasis(f0,f1)
   d:=Degree(f0);
   P:=Parent(f0);
   Q:=CoefficientRing(P);
@@ -692,7 +764,7 @@ function nextStep(f,g : randomize:=false)
   end for;
 end function;
 
-function breakingPath(g1 : randomize:=false, g0:=bestFermat(g1))
+function BreakingPath(g1 : randomize:=false, g0:=bestFermat(g1))
   steps:=[g0];
   repeat
     h:=nextStep(steps[#steps],g1 : randomize:=randomize);
@@ -701,19 +773,25 @@ function breakingPath(g1 : randomize:=false, g0:=bestFermat(g1))
   return steps;
 end function;
 
-// Warning: incorporate this into periodbundle
-load "pathFinder.mag";
-
 //Warning: change default filename
 //Warning: check if the input polynomials are homogeneous and smooth
-function periodBundle(path : precision:=200, straight:=false, filename:="magmaOutput", lairez:=false, periodsOnly:=true, randomizePath:=true, pathfinder:=false) 
+function PeriodHomotopy(path : precision:=200, straight:=false, filePathName:="", lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
 
   print "\nSetting up the path, cohomology bases and transition matricies...\n";
 
   target:=path[#path]; 
   P:=Parent(target);
   d:=Degree(target); 
+  if d eq 1 then
+    error "Degree of the hypersurface needs to be greater than one.";
+    return [**];
+  end if;
   n:=Ngens(P)-2;
+
+  if classicalPeriods and (Ceiling(n/2)*d-n-2 lt 0) then
+    print "\nWARNING: This hypersurface has low degree and does not admit classical periods. We will now set classicalPeriods to false.\n";
+    classicalPeriods := false;
+  end if;
 
   if straight then
     if #path eq 1 then
@@ -723,16 +801,25 @@ function periodBundle(path : precision:=200, straight:=false, filename:="magmaOu
       path:=[path[1],path[#path]];
     end if;
   elif #path eq 1 then 
-    path:=breakingPath(path[1] : randomize:=randomizePath); 
+    path:=BreakingPath(path[1] : randomize:=randomizePath); 
   end if;
 
-  families:=[*setupFamily(path[i],path[i+1]): i in [1..(#path-1)]*];
+  families:=[*SetupFamily(path[i],path[i+1]): i in [1..(#path-1)]*];
 
-  if periodsOnly then
-    if d-n-2 lt 0 then Error("The variety has no holomorphic forms. Set the option periodsOnly to false if you want to compute the entire cohomology pairing."); end if;
-    bases:=[*computeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-2)]*] cat [*[mon : mon in MonomialsOfDegree(P,d-n-2)]*];
+  if classicalPeriods then
+    bases:=[*ComputeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-2)]*];
+    // maximum pole order for classical periods
+    ll := Ceiling(n/2);
+    lastForms:=[];
+    for i in [1..ll] do
+    polyDegree:=i*d-n-2;
+      if polyDegree ge 0 then
+      lastForms:=lastForms cat [mon : mon in MonomialsOfDegree(P,polyDegree)];
+      end if;
+    end for;
+  bases:= bases cat [*lastForms*];
   else
-    bases:=[*computeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-1)]*];
+    bases:=[*ComputeCohomologyBasis(path[i],path[i+1]): i in [1..(#path-1)]*];
   end if;
 
   if lairez then
@@ -748,11 +835,12 @@ print "Using the following path:",path;
 print "The number of monomials appearing at each step:\n",pathMons;
 print "The number of monomials that are changed at each step:\n",pathMonsChange;
 
+tstart:=Cputime();
   relevantDerivatives:=[];
   allODEs:=[];
   for i in [1..#families] do
     relDers:=[];
-    print "\nWe are at family number",i,"out of",#families,"\n";
+    print "\n\n*********\nWe are at family number",i,"out of",#families,"\n*********\n";
     odes:=picfuchs(families[i],bases[i]);
     for j in [1..#odes] do
       _,requiredDerivatives := localBasis(odes[j]);
@@ -762,18 +850,26 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
     Append(~allODEs,odes);
   end for;
 
+  printf "\n\nComputation of the differential equations is now complete (%o seconds). Now setting up initial conditions.\n\n", Cputime()-tstart;
+
+  tstart:=Cputime();
   // the initial conditions for the first family
-  initialConditions:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
+  initialConditions,intmat:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
   // the change of coordinates necessary to setup initial conditions for later families
   coords:=[];
   for i in [2..#families] do
     coord:=coordinatesInCohomology(path[i],bases[i-1],relevantDerivatives[i]);
     Append(~coords,coord);
   end for;
+  printf "\n\nInitial conditions are computed in %o seconds.\n",Cputime()-tstart;
 
   // WARNING: path finder needs to be loaded first
-  if pathfinder then
-    integrationPaths2d:=pathFinder(allODEs);
+  if pathfinder1 or pathfinder2 then
+    if pathfinder2 then
+      integrationPaths2d,allSings:=PathFinder2(allODEs);
+    elif pathfinder1 then
+      integrationPaths2d,allSings:=PathFinder1(path);
+    end if;
     Cc:=ComplexField(10);
     AssignNames(~Cc,["I"]);
     integrationPaths:=[];
@@ -783,22 +879,42 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
       integrationPath[#integrationPath]:=Sprint(1);
       Append(~integrationPaths,integrationPath);
     end for;
+    singularPoints:=[planeToComplex(sings):sings in allSings];
   else
     integrationPaths:=[];
+    singularPoints:=[];
   end if;
 
-  file:=filename*".mag";
+  print "\nWe are now processing the output to feed into Sage.\n";
+
+  tstart:=Cputime();
+  file:=filePathName*"MagmaOutput.mag";
   Write(file,"geometricGenus="*Sprint(Binomial(d-1,n+1)) : Overwrite:=true);
-  Write(file,"periodsOnly="*Sprint(periodsOnly));
+  Write(file,"classicalPeriods="*Sprint(classicalPeriods));
   Write(file,"paths="*Sprint(integrationPaths));
+  Write(file,"allSings="*Sprint(singularPoints));
   Write(file,"rawInits="*Sprint(coords));
   Write(file,"inits="*Sprint(initialConditions));
   Write(file,"allODEs="*Sprint(allODEs));
   Write(file,"#deformationPath:="*Sprint(path));
 
+  Write(filePathName*"IntersectionMatrix.mag","intmat:=Matrix("*Sprint(intmat)*")":Overwrite:=true);
+  Write(filePathName*"IntersectionMatrix.sage","intmat=Matrix("*Sprint(intmat)*")":Overwrite:=true);
+  
+  file2:=filePathName*"Singularities.mag";
+  Write(file2," ": Overwrite:=true);
+  Write(file2," ");
+  Write(file2,"paths="*Sprint(integrationPaths));
+  Write(file2,"allSings="*Sprint(singularPoints));
+  printf "Writing to external file took %o seconds.",Cputime()-tstart;
+  
+  tstart:=Cputime();
   System("$(which awk) -f convert.awk "*file*" > current.sage");
+  System("$(which awk) -f convert.awk "*file2*" > singularities.sage");
+  printf "\nConverting the output took %o seconds.\n\n", Cputime()-tstart;
 
-  Write("current.sage","periodsOnly="*Sprint(periodsOnly));
+  Write("current.sage","classicalPeriods="*Sprint(classicalPeriods));
+
 
 
 pathMons:=[#Monomials(p) : p in path];
@@ -809,7 +925,7 @@ print "The number of monomials appearing at each step:\n",pathMons;
 print "The number of monomials that are changed at each step:\n",pathMonsChange;
 
   
-  return [*path,coords,initialConditions,allODEs*];
+  return [*path,coords,initialConditions,allODEs,bases*];
 end function;
 
 // input: list of lists of ODEs
@@ -831,23 +947,4 @@ function analytics(allODEs);
   return res;
 end function;
 
-// input: f0,f1 two hom polys of same degree
-// output: the values of t for which the hypersurface (1-t)*f0+t*f1 is singular
-// assuming general fiber is smooth
-function singularFibersOfPencil(f0,f1:KK:=ComplexField(20))
-  P:=Parent(f0);
-  R<t>:=PolynomialRing(Rationals(),Ngens(P)+1,"elim",1);
-  inc:=hom<P->R|[R.i : i in [2..Ngens(R)]]>;
-  F:=(1-t)*inc(f0)+t*inc(f1);
-  I:=ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
-  J:=ideal<R|[R.i : i in [2..Ngens(R)]]>;
-  IJ:=Saturation(I,J);
-  gb:=GroebnerBasis(IJ);
-  polys:=[p : p in gb | IsUnivariate(p,t)];
-  rts:=[KK|];
-  for p in polys do
-    _,h:=IsUnivariate(p);
-    rts:=rts cat [r[1] : r in Roots(h,KK)];
-  end for;
-  return rts;
-end function;
+

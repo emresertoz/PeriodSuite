@@ -1,7 +1,8 @@
 //clear;
 SetViMode(true);
 load "lairez.mag"; // lairezPeriods
-load "periodBundle.mag";
+load "pathfinder.mag";
+load "PeriodHomotopy.mag";
 //load "~/git-projects/periods/periods.mag";
 //load "~/git-projects/periods/initialConditions.mag";
 
