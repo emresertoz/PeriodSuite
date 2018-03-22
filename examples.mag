@@ -5,7 +5,7 @@ load "suite.mag";
 f:=smoothHypersurface(P,4);
 
 // Compute a path of deformation, compatible cohomology bases at each step, find Picard-Fuchs equations, determine initial conditions, write to a Sage readable file (current.sage)
-time pb:=periodBundle([f]);
+time ph:=PeriodHomotopy([f]);
 // Beware of the extra square brackets!
 
 // TIP: Do *not* settle for the first computation. Kill the computation after a few seconds and try again. You may find a superior path of deformation that way.
@@ -25,7 +25,7 @@ time pb:=periodBundle([f]);
 
 // By default, for each deformation step, a straight path of integration is used! 
 // If you want to find another path use:
-// time pb:=periodBundle([f] : pathfinder:=true);
+// time ph:=PeriodHomotopy([f] : pathfinder:=true);
 
 // A deformation path is automatically computed with some basic heuristics and with randomization. It is recommended that you try a function several times to make sure you are not stuck in a highly sub-optimal path. (This can make a huge difference!)
 
@@ -33,7 +33,7 @@ time pb:=periodBundle([f]);
 // favoriteDeformation:=pb[2];
 
 // Then you can re-use it like this:
-// periodBundle(favoriteDeformation);
+// PeriodHomotopy(favoriteDeformation);
 
 ////////////
 // OUTPUT //
@@ -56,14 +56,12 @@ time pb:=periodBundle([f]);
 
 // The timings refer to optimal deformation paths that were found after several attemps, if yours is taking longer kill the computation and try again to find a better path
 
-// pic 20
 // schur
 f:=x*(x^3-y^3)-z*(z^3-w^3);
 
 // 64 lines
 f:=-8*x^4 - 7*x*z^3 - y^4 + 5*y*w^3;
 
-//pic 12
 // 0.6s for ODEs + 40s for integration
 f:=-x^3*w + 8*x*y^2*w - y^4 + z^4 + 8*w^4;
 def:=[
@@ -73,7 +71,6 @@ x^4 - x^3*w - y^4 + z^4 + 8*w^4,
 -x^3*w + 8*x*y^2*w - y^4 + z^4 + 8*w^4
 ];
 
-// pic 15
 // 0.5s ODE + 20s integrate
 f:=-3*x^4 + 5*x*y*z*w - 10*y^4 + 5*z^4 - 7*z*w^3;
 // a good path
@@ -84,7 +81,6 @@ deformation:=[
 -3*x^4 + 5*x*y*z*w - 10*y^4 + 5*z^4 - 7*z*w^3
 ];
 
-// pic 12
 // 0.5s + 30s
 f:=10*x^3*w + 10*x*y^2*w + 8*x*w^3 - 2*y^4 + 7*z^4;
 // a good path
@@ -97,11 +93,9 @@ x^4 + 10*x^3*w - 2*y^4 + 7*z^4 + w^4,
 10*x^3*w + 10*x*y^2*w + 8*x*w^3 - 2*y^4 + 7*z^4
 ];
 
-// Picard rank appears to be 1
 // Hard one: illustrates the use of saving your paths! 
 f:=x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3;
 // An *extremely* rare fast path (0.5s + 24s)
-// Deciding its picard rank is hard (20? or 1?)
 def:=[
 x^4 + 3*y^4 + z^4 + w^4,
 x^4 + 3*y^4 + z^4 - 4*z*w^3 + w^4,
@@ -112,7 +106,6 @@ x^4 - 5*x*y^3 + 3*y^4 - 5*y*z^3 - 4*z*w^3
 ];
 
 // 0.5 s + 31 s
-// pic rk 18
 def:=[
 -4*x^4 + y^4 + z^4 + 6*w^4,
 -4*x^4 + y^4 + z^4 + 6*z^2*w^2 + 6*w^4,
@@ -123,7 +116,6 @@ def:=[
 ];
 
 // 15.700s + ??
-// pic ??
 // straight path takes ~100 seconds giving an ODE of order degree (8,~130)
 // the following deformation gives ODEs with degrees less than 17
 def:=[
@@ -157,4 +149,4 @@ load "suite.mag";
 P<x,y,z>:=PolynomialRing(Rationals(),3);
 u:=20;
 f:=x^(3*u)+y^(3*u)+z^(3*u)+x^u*y^u*z^u;
-time pb:=periodBundle([f]:precision:=1);
+time ph:=PeriodHomotopy([f]:precision:=1);

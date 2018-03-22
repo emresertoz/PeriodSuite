@@ -2,7 +2,7 @@ load "suite.mag";
 
 f:=smoothHypersurface(P,4);
 
-time pb:=periodBundle([f]);
+time ph:=PeriodHomotopy([f]);
 
 
 // 0.5s ODE + 20s integrate

@@ -14,14 +14,24 @@ Bug reports are most welcome.
 
 Two parts are needed to compute periods. One part, provided here, has everything except for the numerical integrator. The second part, the inegrator, has to be obtained from Marc Mezarrabbo's webpage.
 
+#### Remarks:
+
+- This software will only work on Unix based systems, e.g., Linux and Mac. 
+- If you do not have the text processor `awk` already, please install it first.
+
 ### Part 1 - Picard-Fuchs equations
 
-Clone this repository to a directory. Inside, open the folder "pathToSuite" and write the *complete* path to the directory in which you have cloned this repository. Alternatively, type `pwd > pathToSuite` from within the repo.
+Clone this repository to a directory.
 
-For example:
+    git clone https://github.com/period-suite/period-suite.git /path/to/period-suite
 
-    git clone https://github.com/period-suite/period-suite.git /home/period-suite
-    cd /home/period-suite && pwd > pathToSuite
+From within the directory, open `suite.mag` and set `pathToSuite` to the *complete* path of this directory. 
+
+Now open `integrator.ipynb` and `find_path.ipynb` to set the value of `pathToSuite` as before. For instance:
+
+    sage --notebook=jupyter integrator.ipynb
+
+    sage> pathToSuite="/path/to/period-suite";
 
 ### Part 2 - Integration
 
@@ -41,9 +51,7 @@ The newest, most stable versions of all software used are recommended and often 
 
 # Usage
 
-For convenience, we will assume you are in the directory to which you have cloned this repository. If not, prepend the directory path to filenames appropriately. 
-
-Open a Magma session and load the file `suite.mag`.
+Navigate to the directory in which you have cloned this repository. Open a Magma session and load the file `suite.mag`.
 
     Magma> load "suite.mag";
 
@@ -61,6 +69,10 @@ Now, from another terminal, open the integrator in a SageMath jupyter notebook s
 When you hit enter on the first code block, integration will start automatically. You can follow the progress of integration from the printed messages. Once integration is complete, the periods are printed on the screen and are written into the file `lastPeriods` in a way readable by Magma. 
 
 From within SageMath, you can use the value `periods` or from within Magma type `load "lastPeriods"`. The latter command sets `M` to be the period matrix.
+
+## Examples
+
+See `examples.mag` for some examples.
 
 ## Important tip
 
@@ -88,7 +100,7 @@ ph[3] contains the ODEs for the periods of the forms in ph[2].
 
 But the main bulk of the output, including the initial conditions and transition matricies between families, is written in the file `current.sage`, where it is read by `integrator.ipynb`.
 
-### Path Finder
+### Path finder
 
 The integrator needs a path in the complex plane for every one of the systems it integrates. By default it will try the straigh path 0 to 1, it works most of the time. However, if there are singularities along the way the computations might not terminate. In this case we recommend setting one of the following options on `PeriodHomotopy`:
 
