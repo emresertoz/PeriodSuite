@@ -806,6 +806,8 @@ end function;
 //Warning: check if the input polynomials are homogeneous and smooth
 function PeriodHomotopy(path : precision:=200, straight:=false, filePathName:="", lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
 
+  beginningTime:=Cputime();
+
   print "\nSetting up the path, cohomology bases and transition matricies...\n";
 
   target:=path[#path]; 
@@ -953,8 +955,9 @@ print "Used the following path:",path;
 print "The number of monomials appearing at each step:\n",pathMons;
 print "The number of monomials that are changed at each step:\n",pathMonsChange;
 
+print "\n Total time:", Cputime()-beginningTime;
   
-  return [*path,coords,initialConditions,allODEs,bases*];
+  return [*path,bases,allODEs*];
 end function;
 
 // input: list of lists of ODEs

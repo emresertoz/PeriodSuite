@@ -1,13 +1,17 @@
-//clear;
-SetViMode(true);
 load "lairez.mag"; // lairezPeriods
 load "pathfinder.mag";
 load "PeriodHomotopy.mag";
-//load "~/git-projects/periods/periods.mag";
-//load "~/git-projects/periods/initialConditions.mag";
+
+// useful rings to have defined
 
 QQ:=Rationals();
-ZZ:=Integers();
+P<x,y,z,w>:=PolynomialRing(QQ,4);
+CC<I>:=ComplexField(30);
+K<t>:=FunctionField(QQ);
+RR<D>:=PolynomialRing(K);
+
+
+// useful functions
 
 function randomHomPoly(ring,deg : coefSize:=10, sparse:=0)
 
@@ -47,11 +51,3 @@ function smoothHypersurface(ring,deg : coefSize:=10, sparse:=5, verbose:=false)
   return f;
 end function;
 
-//P<x,y,z>:=PolynomialRing(QQ,3);
-
-P<x,y,z,w>:=PolynomialRing(QQ,4);
-CC<I>:=ComplexField(20);
-K<t>:=FunctionField(QQ);
-RR<D>:=PolynomialRing(K);
-
-//P<x,y,z,w,s>:=PolynomialRing(QQ,5);
