@@ -2,6 +2,8 @@
 
 Software to compute periods of hypersurfaces, with additional functions to make use of computed periods.
 
+This is an implementation of the algorithm introduced in [Computing periods of hypersurfaces](https://sertozemre.files.wordpress.com/2018/03/computing_periods.pdf).
+
 ## Help
 
 If you need help using this software, feel free to contact me at emresertoz \[at\] gmail \[dot\] com.  
@@ -14,7 +16,7 @@ Two parts are needed to compute periods. One part, provided here, has everything
 
 ### Part 1 - Picard-Fuchs equations
 
-Clone this repository to a directory. Inside, open the folder "pathToSuite" and write the *complete* path to the directory which you have cloned this repository. Alternatively, type `pwd > pathToSuite` from within the repo.
+Clone this repository to a directory. Inside, open the folder "pathToSuite" and write the *complete* path to the directory in which you have cloned this repository. Alternatively, type `pwd > pathToSuite` from within the repo.
 
 For example:
 
@@ -23,7 +25,7 @@ For example:
 
 ### Part 2 - Integration
 
-Navigate to [Mezzarobba's homepage](http://marc.mezzarobba.net/code/ore_algebra-analytic/). Read the instruction to install the *latest developmental* branch of `ore_algebra-analytic`.  His code is available on his private repository:
+Navigate to [Mezzarobba's homepage](http://marc.mezzarobba.net/code/ore_algebra-analytic/). Read the instructions to install the *latest developmental* branch of `ore_algebra-analytic`.  His code is available on his private repository:
 
 > http://marc.mezzarobba.net/code/ore_algebra-analytic.git/
 
@@ -35,6 +37,8 @@ The newest, most stable versions of all software used are recommended and often 
 - Make sure you have the latest version of SageMath \(v8.1 or higher\) and Magma \(v2.23.8 or higher\). 
 - If you do not use `PathFinder2` then Magma v.2.23.1 or higher will be sufficient.
 
+******
+
 # Usage
 
 For convenience, we will assume you are in the directory to which you have cloned this repository. If not, prepend the directory path to filenames appropriately. 
@@ -43,20 +47,20 @@ Open a Magma session and load the file `suite.mag`.
 
     Magma> load "suite.mag";
 
-Now you are set and can start using the code. We automatically define a few rings to start using the function but also to manipulate the output of the main function `PeriodHomotopy`. In particular `P` is already defined to be the polynomial ring with four variables `x,y,z,w`. These definitions are made in `suite.mag` and feel free to remove them if you wish.
+Now you are set and can start using the code. We automatically define a few rings to start using the function but also to manipulate the output of the main function `PeriodHomotopy`. In particular `P` is already defined to be the polynomial ring with four variables `x,y,z,w`. These definitions are made in `suite.mag`; feel free to remove them if you wish.
 
     Magma> f:=-4*x^4 + 7*x*y^3 + 2*z^3*w + 6*z^2*w^2 + 6*w^4;
     Magma> ph:=PeriodHomotopy([f]);
 
 Note the extra square brackets around `f`! See advanced usage below on how to give sequences to `PeriodHomotopy`.  The function `PeriodHomotopy` will produce the necessary ODEs and the initial conditions for the numerical integrator. 
 
-Now, from another terminal, open the integrator in a SageMath jupyter notebook session and hit enter on the first code block:
+Now, from another terminal, open the integrator in a SageMath jupyter notebook session:
 
     sage --notebook=jupyter integrator.ipynb
 
-The integration will start automatically. You can follow the progress of integration from the printed messages. Once integration is complete, the periods are printed on the screen and are written into the file `lastPeriods` in a way readable by Magma. 
+When you hit enter on the first code block, integration will start automatically. You can follow the progress of integration from the printed messages. Once integration is complete, the periods are printed on the screen and are written into the file `lastPeriods` in a way readable by Magma. 
 
-From within SageMath, you can use the value `periods` or from within Magma type `load "lastPeriods` which sets `M` to be the period matrix.
+From within SageMath, you can use the value `periods` or from within Magma type `load "lastPeriods"`. The latter command sets `M` to be the period matrix.
 
 ## Important tip
 
@@ -64,13 +68,13 @@ By default, the deformation path to the target hypersurface is created randomly 
 
 This is very important! The result of a computation may take hours or a fraction of a second, depending on how good the deformation path is. For harder computations, it is worth spending time on the discovery of a good path.
 
-## Advanced usage
+******
+
+# Advanced usage
 
 There are many options and additional functions. We list the most important ones here. Recall the following definition.
 
-A polynomial of the form 
-> c0\*x0^d + ... + cn\*xn^d
-where `c0,..,cn` are non-zero, is called of *Fermat type*.
+A polynomial of the form `c0\*x0^d + ... + cn\*xn^d` where `c0,..,cn` are non-zero, is called of *Fermat type*.
 
 ### Output
 
@@ -96,7 +100,7 @@ or
 
 Both have advantages and disadvanteges. But we recommend that you use the second one only when the first one doesn't terminate.
 
-If either of these options are set, you can open the notebook `find_path.ipynb` and run the *last* block to see where the singularities of your families lie \(blue points\) and the path of integration \(red lines\).
+If either of these options are set, you can open the notebook `find_path.ipynb` and run the *first* block to see where the singularities of your families lie \(blue points\) and the path of integration \(red lines\).
 
 If you want to edit the integration paths manually, open the file `current.sage` and change the end points of your rectilinear paths.
 
