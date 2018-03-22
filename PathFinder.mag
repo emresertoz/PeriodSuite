@@ -195,7 +195,7 @@ function PathFinder1(deformationPath)
     Append(~paths,path);
     Append(~allSings,sFibs2D);
   end for;
-  print "\nPathFinder 2 terminated in", Cputime()-time0,"seconds.";
+  print "\nPathFinder1 terminated in", Cputime()-time0,"seconds.";
 
   return paths, allSings;
 end function;
