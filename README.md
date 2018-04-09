@@ -86,7 +86,7 @@ This is very important! The result of a computation may take hours or a fraction
 
 There are many options and additional functions. We list the most important ones here. Recall the following definition.
 
-A polynomial of the form `c0\*x0^d + ... + cn\*xn^d` where `c0,..,cn` are non-zero, is called of *Fermat type*.
+A polynomial of the form `c0*x0^d + ... + cn*xn^d` where `c0,..,cn` are non-zero, is called of *Fermat type*.
 
 ### Output
 
