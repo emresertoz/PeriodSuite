@@ -2,7 +2,28 @@ load "suite.mag";
 
 f:=smoothHypersurface(P,4);
 
-time ph:=PeriodHomotopy([f]);
+ph:=PeriodHomotopy([f]);
+
+// simple example
+f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
+
+// a threefold
+P4<[u]>:=PolynomialRing(Rationals(),5);
+f:=smoothHypersurface(P4,3);
+
+// working example
+def:=[
+u[1]^3 + u[2]^3 + u[3]^3 + u[4]^3 + u[5]^3,
+u[1]^3 + u[2]^3 + u[3]^3 + u[4]^3 + 5*u[4]^2*u[5] + u[5]^3,
+u[1]^3 + u[2]^3 + u[3]^3 + 5*u[4]^2*u[5] + u[5]^3,
+u[1]^3 - 4*u[1]^2*u[4] + u[2]^3 + u[3]^3 + 5*u[4]^2*u[5] + u[5]^3,
+-4*u[1]^2*u[4] + u[2]^3 + u[3]^3 + 5*u[4]^2*u[5] + u[5]^3,
+-4*u[1]^2*u[4] - 2*u[1]*u[3]^2 + u[2]^3 + u[3]^3 + 5*u[4]^2*u[5] + u[5]^3,
+-4*u[1]^2*u[4] - 2*u[1]*u[3]^2 + u[2]^3 + 5*u[4]^2*u[5] + u[5]^3,
+-4*u[1]^2*u[4] - 2*u[1]*u[3]^2 + u[2]^3 + 2*u[3]*u[5]^2 + 5*u[4]^2*u[5] +
+    u[5]^3,
+-4*u[1]^2*u[4] - 2*u[1]*u[3]^2 + u[2]^3 + 2*u[3]*u[5]^2 + 5*u[4]^2*u[5]
+];
 
 
 // 0.5s ODE + 20s integrate
