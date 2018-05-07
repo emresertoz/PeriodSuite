@@ -143,6 +143,19 @@ def:=[
 9*x^5 - 2*x*y^4 - y^3*z^2 - 5*y*z^4 - 7*w^5
 ];
 
+// Degree 5 example from Matthias Schuett
+// target surface is singular
+// it should have picard rank 13
+// PF: 456 s 
+// integrate: 680 s (e-100 asked, e-67 delivered)
+[
+x^5 + y^5 + z^5 + w^5,
+x^5 + y^5 + z^5 + z^4*w + w^5,
+x^5 + y^5 + z^4*w + w^5,
+x^5 + x*z*w^3 + y^5 + z^4*w + w^5,
+x^5 + x*z*w^3 + y^5 + z^4*w
+]
+
 
 // Curve of high genus
 load "suite.mag";

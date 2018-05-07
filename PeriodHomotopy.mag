@@ -951,3 +951,94 @@ function analytics(allODEs);
 end function;
 
 
+// Input: A matrix with complex entries, the known precision of entries, offset precision use for LLL
+// Output: Integral linear relations between the columns of given matrix
+// additional output is printed out to decide feasibility of the claimed relations
+function HodgeRank(periodMatrix,inputPrecision,offset)
+  v:=periodMatrix;
+  CC<I>:=Parent(v[1,1]);
+
+  precision:=inputPrecision;
+  offsetPrecision:=offset;
+  innerProduct:=IdentityMatrix(Integers(),NumberOfColumns(v));
+  //innerProduct:=intmat;
+
+  offsetV:=10^(precision-offsetPrecision) * v;
+  Vr := [[Integers() | Round(Real(entry)) : entry in row] : row in RowSequence(offsetV)];
+  Vi := [[Integers() | Round(Imaginary(entry)) : entry in row] : row in RowSequence(offsetV)];
+
+  V:= Vr cat Vi;
+
+  V:= Matrix(V)*innerProduct;
+  VT:=10^3*Transpose(V);
+  r:=NumberOfRows(VT);
+  c:=NumberOfColumns(VT);
+  id:=IdentityMatrix(Integers(),r);
+  W:=HorizontalJoin(VT,id);
+  print "Performing LLL -- this may take some time.";
+  // this could be slow, but should be reliable
+  time LW,B:=LLL(W:Delta:=0.9999,Eta:=0.5001,DeepInsertions:=true);
+  print "Lattice reduction completed.";
+  //LW,B:=LLL(W:Method:="Integral");
+
+  // Checking relations with higher precision that was kept from LLL
+  Bt:=Transpose(B);
+  precisionV:=10^precision * v;
+  VVr := Matrix([[Integers() | Round(Real(entry)) : entry in row] : row in RowSequence(precisionV)]);
+  VVi := Matrix([[Integers() | Round(Imaginary(entry)) : entry in row] : row in RowSequence(precisionV)]);
+
+  realError:=B*Transpose(innerProduct)*Transpose(VVr);
+  imagError:=B*Transpose(innerProduct)*Transpose(VVi);
+
+  // if these are small, relations are believable
+  norms:=[ Norm(realError[i]) + Norm(imagError[i]) + Norm(B[i]): i in [1..Nrows(B)]];
+  norms1:=norms; // extra copies
+  norms2:=norms;
+
+  // most promising relations go to the top
+  B:=RowSequence(B);
+  realError:=RowSequence(realError);
+  imagError:=RowSequence(imagError);
+  ParallelSort(~norms,~B);
+  ParallelSort(~norms1,~realError);
+  ParallelSort(~norms2,~imagError);
+
+  // decide which relations are acceptable, if we trust our precision
+
+  goodRelations:=[];
+  for i in [1..#B] do
+    // these errors should really be zero, we are allowing for rounding error, which should be close to 1
+    errorIsSmall:=&and([ Abs(e) lt 100 : e in realError[i]] cat [ Abs(e) lt 100 : e in imagError[i]]);
+    if errorIsSmall then
+      Append(~goodRelations,B[i]);
+    end if;
+  end for;
+
+  print "\nHodge rank appears to be", Sprint(1+#goodRelations)*".\n";
+  print "Check to see if this makes sense.", "Norms of relations are listed on first row.", "Norms of the errors of these relations are listed on the second row.\n";
+
+  B:=Matrix(B);
+  realError:=Matrix(realError);
+  imagError:=Matrix(imagError);
+  errorField:=RealField(1);
+  zeroRowLength:=#Sprint(Nrows(B));
+  firstRowLength:=Maximum([#Sprint(errorField!Norm(B[j])) : j in [1..Nrows(B)]]);
+
+  j:=1;
+  num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
+  print num,"||", "---hyperplane section---";
+while (j le Nrows(B)) do
+    num:=Sprint(j+1);
+    if #num lt zeroRowLength then
+      num:=&*[" " : i in [1..(zeroRowLength-#num)]]*num;
+    end if;
+    rowOne:=Sprint(errorField!Norm(B[j]));
+    whiteSpace:=&*[" " : i in [0..(firstRowLength-#rowOne)]];
+    print num, "||", rowOne*whiteSpace, "   ", errorField!(Norm(realError[j])+Norm(imagError[j]));
+    j:=j+1;
+end while;
+  print "\n";
+
+  // +1 for the hyperplane class which the primitive periods miss
+  return 1+#goodRelations;
+end function;
