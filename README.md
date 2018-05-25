@@ -2,13 +2,9 @@
 
 Software to compute periods of hypersurfaces, with additional functions to make use of computed periods.
 
-This is an implementation of the algorithm introduced in [Computing periods of hypersurfaces](https://sertozemre.files.wordpress.com/2018/03/computing_periods.pdf).
+This is an implementation of the algorithm introduced in [Computing periods of hypersurfaces](https://arxiv.org/abs/1803.08068).
 
-## Help
-
-If you need help using this software, feel free to contact me at emresertoz \[at\] gmail \[dot\] com.  
-
-Bug reports are most welcome.
+Picard rank, or more generally Hodge rank, computations are now available with the caveat that they lack certification. A detailed analysis of the reliability of the Hodge rank computations will appear in an upcoming paper.
 
 ## Installation
 
@@ -35,9 +31,9 @@ Now open `integrator.ipynb` and `find_path.ipynb` to set the value of `pathToSui
 
 ### Part 2 - Integration
 
-Navigate to [Mezzarobba's homepage](http://marc.mezzarobba.net/code/ore_algebra-analytic/). Read the instructions to install the *latest developmental* branch of `ore_algebra-analytic`.  His code is available on his private repository:
+We will need Mezzarrobba's `analytic` extension of the `ore_algebra` package. You may download and istall the current version by typing:
 
-> http://marc.mezzarobba.net/code/ore_algebra-analytic.git/
+    sage -pip install git+https://github.com/mkauers/ore_algebra/
 
 ### Recommendations
 
@@ -68,7 +64,17 @@ Now, from another terminal, open the integrator in a SageMath jupyter notebook s
 
 When you hit enter on the first code block, integration will start automatically. You can follow the progress of integration from the printed messages. Once integration is complete, the periods are printed on the screen and are written into the file `lastPeriods` in a way readable by Magma. 
 
-From within SageMath, you can use the value `periods` or from within Magma type `load "lastPeriods"`. The latter command sets `M` to be the period matrix.
+From within SageMath, you can use the value `periods` or from within Magma type `load "lastPeriods"`. The latter command sets `M` to be the period matrix. Now you can use the built-in features of `period-suite` to work with this period matrix. 
+
+### Hodge rank
+
+Let us suppose `M` is the period matrix of an even dimensional complex hypersurface `X` computed by the method above. We offer a function to compute the *virtual* Hodge rank of `X` from `M`, e.g., the *virtual* Picard rank of `X` when `X` is a surface: 
+
+    Magma> HodgeRank(M,p,q);
+
+Where `p` is the number of digits to which entries of `M` are known to match the actual period matrix --- this is obtained from the rigorous error bounds during integration. The integer `q` must be strictly less than `p`, the number `p-q` is the number of digits that will be used in the actual lattice computations, the remaining `q` digits will be used for verification of relations to avoid over-fitting.
+
+Here *virtual* refers to the fact that the computed number may in principle differ from the Hodge rank, in particular when the precision of the period matrix `M` is too low. We will offer an analysis of the reliability of this method in an upcoming paper.
 
 ## Examples
 

@@ -144,17 +144,19 @@ def:=[
 ];
 
 // Degree 5 example from Matthias Schuett
+//  "Picard numbers of quintic surfaces"
+// (end of page 20, beginning of Section 6)
 // target surface is singular
-// it should have picard rank 13
+// it has picard rank 13
 // PF: 456 s 
 // integrate: 680 s (e-100 asked, e-67 delivered)
-[
+def:=[
 x^5 + y^5 + z^5 + w^5,
 x^5 + y^5 + z^5 + z^4*w + w^5,
 x^5 + y^5 + z^4*w + w^5,
 x^5 + x*z*w^3 + y^5 + z^4*w + w^5,
 x^5 + x*z*w^3 + y^5 + z^4*w
-]
+];
 
 
 // Curve of high genus
