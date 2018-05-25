@@ -8,7 +8,7 @@ Picard rank, or more generally Hodge rank, computations are now available with t
 
 ## Installation
 
-Two parts are needed to compute periods. One part, provided here, has everything except for the numerical integrator. The second part, the inegrator, has to be obtained from Marc Mezarrabbo's webpage.
+Two parts are needed to compute periods. One part, provided here, has everything except for the numerical integrator. The second part, the numerical integrator, requires the installation of the developmental branch of the `ore_algebra` package, which we explain below.
 
 #### Remarks:
 
@@ -31,7 +31,7 @@ Now open `integrator.ipynb` and `find_path.ipynb` to set the value of `pathToSui
 
 ### Part 2 - Integration
 
-We will need Mezzarrobba's `analytic` extension of the `ore_algebra` package. You may download and istall the current version by typing:
+We will need Mezzarrobba's `analytic` extension of the `ore_algebra` package. You may download and install the current version by typing:
 
     sage -pip install git+https://github.com/mkauers/ore_algebra/
 
@@ -104,11 +104,11 @@ ph[2] contains the polynomial part of the forms whose periods are to be computed
 ph[3] contains the ODEs for the periods of the forms in ph[2].
 ```
 
-But the main bulk of the output, including the initial conditions and transition matricies between families, is written in the file `current.sage`, where it is read by `integrator.ipynb`.
+But the main bulk of the output, including the initial conditions and transition matrices between families, is written in the file `current.sage`, where it is read by `integrator.ipynb`.
 
 ### Path finder
 
-The integrator needs a path in the complex plane for every one of the systems it integrates. By default it will try the straigh path 0 to 1, it works most of the time. However, if there are singularities along the way the computations might not terminate. In this case we recommend setting one of the following options on `PeriodHomotopy`:
+The integrator needs a path in the complex plane for every one of the systems it integrates. By default it will try the straight path 0 to 1, it works most of the time. However, if there are singularities along the way the computations might not terminate. In this case we recommend setting one of the following options on `PeriodHomotopy`:
 
     Magma> ph := PeriodHomotopy([f]: pathfinder1:=true);
 
@@ -116,7 +116,7 @@ or
 
     Magma> ph := PeriodHomotopy([f]: pathfinder2:=true);
 
-Both have advantages and disadvanteges. But we recommend that you use the second one only when the first one doesn't terminate.
+Both have advantages and disadvantages. But we recommend that you use the second one only when the first one doesn't terminate.
 
 If either of these options are set, you can open the notebook `find_path.ipynb` and run the *first* block to see where the singularities of your families lie \(blue points\) and the path of integration \(red lines\).
 
