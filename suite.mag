@@ -9,7 +9,7 @@ pathToSuite:="/Users/sertoez/git-projects/period-suite/";
 // Load the main files
 
 load "lairez.mag"; // lairezPeriods
-load "pathfinder.mag";
+load "PathFinder.mag";
 load "PeriodHomotopy.mag";
 
 // useful rings to have defined
