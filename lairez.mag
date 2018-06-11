@@ -9,18 +9,29 @@ if lairezAvailable then
   SetVerbose("User2", true);
   SetAssertions(2);
 
-  // F is a family of hypersurfaces
-  // form is the polynomial part of the form we want to integrate
-  function lairezPicardFuchs(F,forms)
-    R:=Parent(F);
-    K:=CoefficientRing(R);
-    A<t> := FunctionField(Rationals(), Ngens(R)); 
-    psi:=hom<K->A|t>;
-    //dehomogenize R wrt the last variable
-    gens:=[A.i : i in [2..Ngens(A)]] cat [1];
-    phi:=hom<R->A|psi,gens>;
-    return [Periods(phi(form)/phi(F)) : form in forms];
+  // (1-t)*f0+t*f1 is the family of hypersurfaces we are interested in
+  // forms is the set of polynomials representing the forms we want to integrate
+  function lairezPicardFuchs(f0,f1,forms)
+
+    R:=Parent(f0); 
+    Q:=CoefficientRing(R);
+    K<t>:=FunctionField(Q);
+
+    gm:=GaussManinLin(f0,f1:basis:=forms);
+    odes:=ScalarEquations(gm);
+
+    RR<D>:=PolynomialRing(K);
+    verboseODEs:=[RR|]; 
+    for i in [1..#forms] do
+      // coercing might fail
+      ode:=&+[(K!odes[i][j])*D^(j-1) : j in [1..#odes[i]]]; 
+      Append(~verboseODEs,ode);
+    end for;
+
+    return verboseODEs;
+
   end function;
+
 else 
   
   function lairezPicardFuchs(F,forms)

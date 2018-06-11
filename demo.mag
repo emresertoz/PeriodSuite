@@ -9,6 +9,7 @@ f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
 
 // schur
 f:=x*(x^3-y^3)-z*(z^3-w^3);
+ph:=PeriodHomotopy([f]:straight:=true,lairez:=true,classicalPeriods:=false);
 
 load "lastPeriods"; // default precision set to 100
 HodgeRank(M,80,20);

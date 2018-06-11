@@ -846,7 +846,11 @@ tstart:=Cputime();
   for i in [1..#families] do
     relDers:=[];
     print "\n\n************************************\nWe are at family number",i,"out of",#families,"\n************************************\n";
-    odes:=picfuchs(families[i],bases[i]);
+    if lairez then
+      odes:=picfuchs(path[i],path[i+1],bases[i]);
+    else 
+      odes:=picfuchs(families[i],bases[i]);
+    end if;
     for j in [1..#odes] do
       _,requiredDerivatives := localBasis(odes[j]);
       Append(~relDers,computeDerivatives(bases[i,j],path[i],path[i+1],requiredDerivatives : withFactorial:=true));
