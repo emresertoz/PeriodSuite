@@ -1,13 +1,4 @@
-// if you have Pierre Lairez's Period function available, set the following to: true
-lairezAvailable:=false;
-// then point the following path to his PF.spec:
-lairezFile:="~/git-projects/lairez/src/PF.spec";
-
 if lairezAvailable then 
-
-  AttachSpec(lairezFile);
-  SetVerbose("User2", true);
-  SetAssertions(2);
 
   // (1-t)*f0+t*f1 is the family of hypersurfaces we are interested in
   // forms is the set of polynomials representing the forms we want to integrate

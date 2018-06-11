@@ -452,7 +452,7 @@ function massIntegrate(dervs, deg, type : precision:=20)
     end for;
   end for;
   
-  return result,intmat;
+  return result,intmat,phamBasis;
 end function;
 
 //// Part III : Main function, transition matricies, post processing
@@ -776,8 +776,23 @@ function BreakingPath(g1 : randomize:=false, g0:=BestFermat(g1))
   return steps;
 end function;
 
-//Warning: change default filename
-//Warning: check if the input polynomials are homogeneous and smooth
+
+// X a hypersurface Z(f) in P^(n+1)
+// equation: f
+// dimension: n
+// degree: deg X
+// primitivePeriods: (primitive) period matrix of X wrt phamBasis and cohomBasis deformed via data from misc
+// periods:  period matrix of X, completed from the primitive matrix by the addition of a "linear" class
+// primitiveIntersectionMatrix: intersection product on primitive homology wrt to the phamBasis and cohomBasis
+// intersectionMatrix: extension of primitive intersection matrix by the addition of a linear class to Fermat
+// polarization: coordinates of the hyperplane class wrt the basis of homology
+// hodgeLattice: (virtual) Hodge lattice, computed from the period matrix and the linear class
+// precision: the precision for which the period matrix is known to be correct
+// misc: intended to store the deformation family used to go to X, but also other data
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,polarization,hodgeLattice,precision,misc>;
+
+
+// main function
 function PeriodHomotopy(path : precision:=200, straight:=false, lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
 
   beginningTime:=Cputime();
@@ -863,7 +878,7 @@ tstart:=Cputime();
 
   tstart:=Cputime();
   // the initial conditions for the first family
-  initialConditions,intmat:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
+  initialConditions,intmat,phamB:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
   // the change of coordinates necessary to setup initial conditions for later families
   coords:=[];
   for i in [2..#families] do
@@ -931,8 +946,11 @@ print "The number of monomials appearing at each step:\n",pathMons;
 print "The number of monomials that are changed at each step:\n",pathMonsChange;
 
 print "\n Total time:", Cputime()-beginningTime;
+
+// define a period bundle
+X:=rec<PeriodBundle | dimension:=n,degree:=d,primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,misc:=[*path,bases,allODEs*]>;
   
-  return [*path,bases,allODEs*];
+  return X,[*path,bases,allODEs*];
 end function;
 
 // input: list of lists of ODEs
@@ -954,15 +972,110 @@ function analytics(allODEs);
   return res;
 end function;
 
+// virtual hodge lattice
+// rank: rank of the (virtual) Hodge lattice
+// lattice: the intersection matrix of the lattice
+// basis: the basis of the lattice in terms of the basis for homology, together with a linear class
+// degrees: degrees of the algebraic cycles generating the lattice
+// parameters: numerical parameters used for the computation of the hodgeLattice, such as the offset and precision
+virtualLattice := recformat<rank,lattice,basis,polarization,degrees,parameters>;
 
-// Input: A matrix with complex entries, the known precision of entries, offset precision use for LLL
+// input: a PeriodBundle record X
+// output: X, with the intersection matrix on the entire homology of X, as well as the periods extended to entire homology
+function completeHomology(X)
+  // if dimension is odd, primitive homology coincides with homology
+  if X`dimension mod 2 eq 1 then
+    X`periods:=X`primitivePeriods;
+    X`intersectionMatrix:=X`primitiveIntersectionMatrix;
+    return X;
+  end if;
+
+  periods:=X`primitivePeriods;
+  CC<I>:=Parent(periods[1,1]);
+  d:=X`degree;
+  n:=X`dimension;
+  phamB:=X`phamBasis;
+  IM:=ChangeRing(X`primitiveIntersectionMatrix,Rationals());
+  
+  // Using:
+  // Degtyarev and Shimada intersection numbers
+  // Theorem 2.2, arXiv:1405.4683v3
+  // for explanations see: Lairez, Sertoz -- Numerical Hodge Rank
+
+  // the helper tau function
+  function tau(i)
+    if i mod (2*d) eq 1 then return 1;
+    elif i mod (2*d) eq 2*d-1 then return -1;
+    end if;
+    return 0;
+  end function;
+
+  // L is the class of a particular linear subscheme of half-dimension in Fermat.
+  function intersectLwith(beta)
+    return tau(2*beta[n+1]-2*beta[n+2]-1)*&*[tau(2*beta[2*i-1] - 2*beta[2*i] + 1) : i in [1..(n/2)]];
+  end function;
+
+  // We will now compute the projection of L into the primitive homology.
+  intL:=Matrix([[intersectLwith(beta) : beta in phamB]]);
+  IMinv:=Determinant(IM)^(-1)*Adjoint(IM);
+  kappa:=ChangeRing(intL,Rationals())*IMinv;
+
+  //self intersection of kappa
+  kappaSelfIntersection:= kappa*IM*Transpose(kappa);
+
+  // L = 1/d hyp + kappa
+  // since hyp^2 = d
+  // L^2 = 1/d + kappa^2 
+  LSelfIntersection:=Integers()!(kappaSelfIntersection[1,1]+1/d);
+
+  // periods of L (equivalently of kappa) are readily computed from its coordinates in the Pham basis
+  Lperiods:=periods*Transpose(ChangeRing(kappa,CC));
+  allPeriods:=HorizontalJoin(periods,Lperiods);
+  X`periods:=allPeriods;
+
+  // form the intersection matrix for homology by using L^2 and intL
+  fullIM:=VerticalJoin(X`primitiveIntersectionMatrix,intL);
+  temp:=Transpose(HorizontalJoin(intL,Matrix([[LSelfIntersection]])));
+  fullIM:=HorizontalJoin(fullIM,temp);
+  X`intersectionMatrix:=fullIM;
+
+  // the hyperplane class
+  // L = 1/d hyp + kappa
+  // hyp = d*L - d*kappa
+  X`polarization:= HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]]));
+
+  return X; 
+end function;
+
+
+// in case we computed more periods than necessary
+// this function computes the number of rows that we need
+function numberOfRelevantPeriods(n,d)
+  P:=PolynomialRing(Rationals(),n+2);
+  ll := Ceiling(n/2);
+  lastForms:=[];
+  for i in [1..ll] do
+  polyDegree:=i*d-n-2;
+    if polyDegree ge 0 then
+    lastForms:=lastForms cat [mon : mon in MonomialsOfDegree(P,polyDegree)];
+    end if;
+  end for;
+  return #lastForms;
+end function;
+
+// Input: A period bundle, we use the period matrix and the precision, but we also complete the homology
+
 // Output: Integral linear relations between the columns of given matrix
 // additional output is printed out to decide feasibility of the claimed relations
-function HodgeRank(periodMatrix,inputPrecision,offset)
-  v:=periodMatrix;
+function HodgeLattice(aPeriodBundle : offset:=20)
+
+  X:=completeHomology(aPeriodBundle);
+  n:=X`dimension;
+  d:=X`degree;
+  v:=Matrix(X`periods[1..numberOfRelevantPeriods(n,d)]);
   CC<I>:=Parent(v[1,1]);
 
-  precision:=inputPrecision;
+  precision:=X`precision-5;
   offsetPrecision:=offset;
   innerProduct:=IdentityMatrix(Integers(),NumberOfColumns(v));
   //innerProduct:=intmat;
@@ -1018,7 +1131,7 @@ function HodgeRank(periodMatrix,inputPrecision,offset)
     end if;
   end for;
 
-  print "\nHodge rank appears to be", Sprint(1+#goodRelations)*".\n";
+  print "\nHodge rank appears to be", Sprint(#goodRelations)*".\n";
   print "Check to see if this makes sense.", "Norms of relations are listed on first row.", "Norms of the errors of these relations are listed on the second row.\n";
 
   B:=Matrix(B);
@@ -1030,9 +1143,9 @@ function HodgeRank(periodMatrix,inputPrecision,offset)
 
   j:=1;
   num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
-  print num,"||", "---hyperplane section---";
+  //print num,"||", "---hyperplane section---";
 while (j le Nrows(B)) do
-    num:=Sprint(j+1);
+    num:=Sprint(j);
     if #num lt zeroRowLength then
       num:=&*[" " : i in [1..(zeroRowLength-#num)]]*num;
     end if;
@@ -1043,6 +1156,24 @@ while (j le Nrows(B)) do
 end while;
   print "\n";
 
-  // +1 for the hyperplane class which the primitive periods miss
-  return 1+#goodRelations;
+// Forming the Hodge lattice
+
+rho:=#goodRelations;
+IM:=X`intersectionMatrix;
+hyp:=X`polarization;
+degrees:=[B[i]*IM*Transpose(hyp) : i in [1..rho]]; 
+
+basis:=RowSequence(B)[1..rho];
+lattice:=Matrix(basis)*IM*Transpose(Matrix(basis));
+
+//polarization, in the coordinates of the lattice
+Lambda:=LatticeWithBasis(Matrix(basis));
+hyp:=hyp[1]; // one-row-matrix is converted to a vector
+polarization:=Coordinates(Lambda!hyp);
+
+hdgLattice := rec<virtualLattice | rank:=rho, lattice:=lattice, basis:=basis, degrees:=degrees, parameters:=[precision,offsetPrecision], polarization:=polarization>;
+
+  X`hodgeLattice:=hdgLattice;
+
+  return X,rho,lattice;
 end function;

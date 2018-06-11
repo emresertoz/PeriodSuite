@@ -1,12 +1,19 @@
-/////////////////////////////////////////////////////////////////////////////
 //////// Type the correct path to this directory here ///////////////////////
-/////////////////////////////////////////////////////////////////////////////
 pathToSuite:="/Users/sertoez/git-projects/period-suite/";
 /////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////
 
+// if you have Pierre Lairez's Period function available, set the following to: true
+lairezAvailable:=false;
+// and write the path to his "PF.spec" file
+lairezSpec:="~/git-projects/lairez/src/PF.spec";
 
 // Load the main files
+
+if lairezAvailable then
+  AttachSpec(lairezSpec);
+  SetVerbose("User2", true);
+  SetAssertions(2);
+end if;
 
 load "lairez.mag"; // lairezPeriods
 load "PathFinder.mag";
