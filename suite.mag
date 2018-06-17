@@ -5,7 +5,7 @@ pathToSuite:="/Users/sertoez/git-projects/period-suite/";
 // if you have Pierre Lairez's Period function available, set the following to: true
 lairezAvailable:=false;
 // and write the path to his "PF.spec" file
-lairezSpec:="~/git-projects/lairez/src/PF.spec";
+lairezSpec:="periods-lairez/src/PF.spec";
 
 // Load the main files
 

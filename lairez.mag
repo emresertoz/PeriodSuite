@@ -2,13 +2,18 @@ if lairezAvailable then
 
   // (1-t)*f0+t*f1 is the family of hypersurfaces we are interested in
   // forms is the set of polynomials representing the forms we want to integrate
-  function lairezPicardFuchs(f0,f1,forms)
+  function lairezPicardFuchs(f0,f1:forms:=[],info:="1/1")
 
     R:=Parent(f0); 
     Q:=CoefficientRing(R);
     K<t>:=FunctionField(Q);
 
-    gm:=GaussManinLin(f0,f1:basis:=forms);
+    if #forms eq 0 then
+      gm:=GaussManinLin(f0,f1 : name:=info);
+      forms:=gm`basis;
+    else
+      gm:=GaussManinLin(f0,f1: basis:=forms, name:=info);
+    end if;
     odes:=ScalarEquations(gm);
 
     RR<D>:=PolynomialRing(K);

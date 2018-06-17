@@ -862,7 +862,7 @@ tstart:=Cputime();
     relDers:=[];
     print "\n\n************************************\nWe are at family number",i,"out of",#families,"\n************************************\n";
     if lairez then
-      odes:=picfuchs(path[i],path[i+1],bases[i]);
+      odes:=picfuchs(path[i],path[i+1]:forms:=bases[i], info:=Sprint(i)*"/"*Sprint(#families));
     else 
       odes:=picfuchs(families[i],bases[i]);
     end if;

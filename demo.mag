@@ -9,7 +9,7 @@ f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
 
 // schur
 f:=x*(x^3-y^3)-z*(z^3-w^3);
-X:=PeriodHomotopy([f]:lairez:=true,classicalPeriods:=false);
+X:=PeriodHomotopy([f]:lairez:=true);
 
 load "lastPeriods";
 X`primitivePeriods:=M;
