@@ -25,7 +25,7 @@ Two parts are needed to compute periods. One part, provided here, has everything
 
 3) Open `integrator.sage` with a text editor and set the value of `pathToSuite` as above.
 
-Optional) Open `integrator.ipynb` and `find_path.ipynb` to set the value of `pathToSuite` as before. For instance:
+(Optional) Open `integrator.ipynb` and `find_path.ipynb` to set the value of `pathToSuite` as before. For instance:
 
     sage --notebook=jupyter integrator.ipynb
 
@@ -73,11 +73,12 @@ Note the extra square brackets around `f`! See advanced usage below on how to gi
 The function `PeriodHomotopy` will produce the necessary ODEs and the initial conditions for the numerical integrator. Then, it will call SageMath and start integration.
 
 Once computations are complete, type the following to read in the results of the integration manually:
+
     Magma> load "lastPeriods";
     Magma> X`primitivePeriods:=periods;
     Magma> X`precision:=precision;
 
-At this point `X` could be viewed as representing the target hypersurface, but with the additional data of its periods as well as the means used to compute the periods.
+At this point, one could view `X` as representing the target hypersurface, but with the additional data of its periods as well as the means used to compute the periods.
 
 ### Hodge rank
 
@@ -90,7 +91,7 @@ Here *virtual* refers to the fact that the computed lattice may in principle dif
 The attributes of the (virtual) Hodge lattice of `X` can be accessed as follows:
 
     Magma> X`hodgeLattice`lattice;
-    Magma> X`hodgeLattice`polerization;
+    Magma> X`hodgeLattice`polarization;
 
 ## Examples
 
