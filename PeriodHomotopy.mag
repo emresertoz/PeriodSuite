@@ -789,11 +789,11 @@ end function;
 // hodgeLattice: (virtual) Hodge lattice, computed from the period matrix and the linear class
 // precision: the precision for which the period matrix is known to be correct
 // misc: intended to store the deformation family used to go to X, but also other data
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,polarization,hodgeLattice,precision,misc>;
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,polarization,hodgeLattice,precision,odes,deformation>;
 
 
 // main function
-function PeriodHomotopy(path : precision:=200, straight:=false, lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
+function PeriodHomotopy(path : precision:=100, straight:=false, lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
 
   beginningTime:=Cputime();
 
@@ -878,7 +878,8 @@ tstart:=Cputime();
 
   tstart:=Cputime();
   // the initial conditions for the first family
-  initialConditions,intmat,phamB:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=precision); 
+  initialPrecision:=Maximum(precision+50,Round(precision*1.2));
+  initialConditions,intmat,phamB:=massIntegrate(relevantDerivatives[1],Degree(path[1]),Coefficients(path[1]) : precision:=initialPrecision); 
   // the change of coordinates necessary to setup initial conditions for later families
   coords:=[];
   for i in [2..#families] do
@@ -937,6 +938,7 @@ tstart:=Cputime();
   printf "\nConverting the output took %o seconds.\n\n", Cputime()-tstart;
 
   Write("current.sage","classicalPeriods="*Sprint(classicalPeriods));
+  Write("current.sage","precision="*Sprint(precision));
 
 pathMons:=[#Monomials(p) : p in path];
 pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
@@ -947,10 +949,16 @@ print "The number of monomials that are changed at each step:\n",pathMonsChange;
 
 print "\n Total time:", Cputime()-beginningTime;
 
+print "\n\n\nBeginning integration -- calling SageMath \n\n\n";
+
+System("$(which sage) integrator.sage");
+
+print "Period homotopy is completed in", Cputime()-beginningTime, "seconds.";
+
 // define a period bundle
-X:=rec<PeriodBundle | dimension:=n,degree:=d,primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,misc:=[*path,bases,allODEs*]>;
+bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d,primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,odes:=allODEs,deformation:=path, cohomBasis:=bases>;
   
-  return X,[*path,bases,allODEs*];
+  return bundle,[*path,bases,allODEs*];
 end function;
 
 // input: list of lists of ODEs

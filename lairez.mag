@@ -31,7 +31,7 @@ if lairezAvailable then
 else 
   
   function lairezPicardFuchs(F,forms)
-    Error("\n\n Lairez's code PF.spec is not declared available! Please navigate to 'lairez.mag' and follow instructions.\n\n");
+    Error("\n\n Lairez's code PF.spec is not declared available! Please navigate to 'suite.mag' and follow instructions.\n\n");
     return "Error";
   end function;
 

@@ -1,21 +1,27 @@
 load "suite.mag";
 
-f:=smoothHypersurface(P,4);
+// generating a smooth quartic surface
+f:=smoothHypersurface(P,4); f;
 
-ph:=PeriodHomotopy([f]);
+// finding the ODEs for the periods
+X:=PeriodHomotopy([f]);
 
-// simple example
-f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
-
-// schur
-f:=x*(x^3-y^3)-z*(z^3-w^3);
-X:=PeriodHomotopy([f]:lairez:=true);
-
+// after the ODEs have been integrated, we can compute the Hodge lattice
 load "lastPeriods";
-X`primitivePeriods:=M;
-X`precision:=95;
+X`primitivePeriods:=periods;
+X`precision:=precision; // use the end precision of the periods
 X:=HodgeLattice(X);
 
+// a simple example
+f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
+
+// schur, Picard rank 20
+f:=x*(x^3-y^3)-z*(z^3-w^3);
+X:=PeriodHomotopy([f]:straight:=true);
+
+// You can also use the evaluation-interpolation method
+// implemented by Pierre Lairez to compute the ODEs
+X:=PeriodHomotopy([f]:lairez:=true);
 
 //////////////////
 // a threefold //
