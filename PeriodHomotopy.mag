@@ -793,6 +793,7 @@ PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,ph
 
 
 // main function
+forward completeHomology;
 function PeriodHomotopy(path : precision:=100, straight:=false, lairez:=false, classicalPeriods:=true, randomizePath:=true, pathfinder1:=false,pathfinder2:=false) 
 
   beginningTime:=Cputime();
@@ -957,6 +958,16 @@ print "Period homotopy is completed in", Cputime()-beginningTime, "seconds.";
 
 // define a period bundle
 bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d,primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,odes:=allODEs,deformation:=path, cohomBasis:=bases>;
+
+file:=Open("lastPeriods","r");
+s:=Gets(file);
+bundle`precision:=eval s;
+s:=Gets(file);
+CC<I>:=ComplexField(eval s);
+s:=Gets(file);
+bundle`primitivePeriods:=eval s;
+
+bundle:=completeHomology(bundle);
   
   return bundle,[*path,bases,allODEs*];
 end function;
@@ -1077,7 +1088,7 @@ end function;
 // additional output is printed out to decide feasibility of the claimed relations
 function HodgeLattice(aPeriodBundle : offset:=20)
 
-  X:=completeHomology(aPeriodBundle);
+  X:=aPeriodBundle;
   n:=X`dimension;
   d:=X`degree;
   v:=Matrix(X`periods[1..numberOfRelevantPeriods(n,d)]);
@@ -1177,7 +1188,7 @@ lattice:=Matrix(basis)*IM*Transpose(Matrix(basis));
 //polarization, in the coordinates of the lattice
 Lambda:=LatticeWithBasis(Matrix(basis));
 hyp:=hyp[1]; // one-row-matrix is converted to a vector
-polarization:=Coordinates(Lambda!hyp);
+polarization:=Vector(Coordinates(Lambda!hyp));
 
 hdgLattice := rec<virtualLattice | rank:=rho, lattice:=lattice, basis:=basis, degrees:=degrees, parameters:=[precision,offsetPrecision], polarization:=polarization>;
 

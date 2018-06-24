@@ -74,24 +74,44 @@ print "\nIntegration took", t1-t0, "seconds in total.\n"
 
 
 # Write the periods to file
-
-def row2string(row):
-    strRow=str(row[0])
-    for i in [1..(len(row)-1)]:
-        strRow=strRow+", "+str(row[i])
-    return "["+strRow+"]"
     
 outputFile = open(pathToSuite+"lastPeriods",'w')
 
 precision=-maximalError.log(10).round()
-ball_size=ceil(precision/100)*100;
+outputFile.write(str(precision)+"\n")
 
-outputFile.write("SetDefaultRealFieldPrecision(" + str(ball_size) + ");\n")
-outputFile.write("CC<I>:=ComplexField(" + str(ball_size) + ");\n")
-outputFile.write("precision:="+str(precision)+ ";\n")
-outputFile.write("periods:=Matrix(["+row2string(periods[0]))
-for i in [1..(periods.nrows()-1)]:
-    outputFile.write(",\n"+row2string(periods[i]))
-outputFile.write("]);")
+digits=ceil(precision/100)*100;
+outputFile.write(str(digits)+"\n")
+
+bits=ceil(log(10^digits)/log(2))+10
+Rr=RealField(bits)
+def print_number(num):
+    re=Rr(num.real())
+    im=Rr(num.imag())
+    re_str=abs(re).str(digits=digits,no_sci=2)+"p"+str(digits)
+    im_str=abs(im).str(digits=digits,no_sci=2)+"p"+str(digits)+"*I"
+    if re.is_square():
+        num_str=re_str
+    else:
+        num_str="-"+re_str
+    if im.is_square():
+        num_str=num_str+"+"+im_str
+    else:
+        num_str=num_str+"-"+im_str
+    return num_str
+
+numrows=periods.nrows()
+numcols=periods.ncols()
+
+prefix="Matrix(CC," +str(numrows) +","+str(numcols)+", [CC|"
+
+numels=numrows*numcols
+flat_periods=periods.list()
+mat=print_number(flat_periods[0])
+
+for i in [1..(numels-1)]:
+    mat=mat+","+print_number(flat_periods[i])
+    
+outputFile.write(prefix+mat+"])")
 outputFile.close()
 

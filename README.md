@@ -72,13 +72,15 @@ Note the extra square brackets around `f`! See advanced usage below on how to gi
 
 The function `PeriodHomotopy` will produce the necessary ODEs and the initial conditions for the numerical integrator. Then, it will call SageMath and start integration.
 
-Once computations are complete, type the following to read in the results of the integration manually:
-
-    Magma> load "lastPeriods";
-    Magma> X`primitivePeriods:=periods;
-    Magma> X`precision:=precision;
-
 At this point, one could view `X` as representing the target hypersurface, but with the additional data of its periods as well as the means used to compute the periods.
+
+You can now view the periods of the primitive periods of `X` by typing:
+
+    Magma> X`primitivePeriods;
+
+We automatically complete the primitive periods by adding the class of a linear space in Fermat hypersurface. To access the complete periods type:
+
+    Magma> X`periods;
 
 ### Hodge rank
 
