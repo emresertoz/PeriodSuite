@@ -74,26 +74,31 @@ The function `PeriodHomotopy` will produce the necessary ODEs and the initial co
 
 At this point, one could view `X` as representing the target hypersurface, but with the additional data of its periods as well as the means used to compute the periods.
 
-You can now view the periods of the primitive periods of `X` by typing:
+You can now view the primitive periods of `X` by typing:
 
     Magma> X`primitivePeriods;
 
-We automatically complete the primitive periods by adding the class of a linear space in Fermat hypersurface. To access the complete periods type:
+We automatically complete the primitive periods by adding the class of a linear space in Fermat hypersurface. This step is superfluous if the dimension of the hypersurface `Z(f)` is even. To access the complete periods type:
 
     Magma> X`periods;
 
+The integral basis for homology is only implicit. However, the basis for cohomology used for the period matrix is explicit and can be accessed by typing:
+
+    Magma> X`cohomBasis;
+
 ### Hodge rank
 
-Let us suppose you have completed a period homotopy and read in the results of the integration as indicated above. Then `X` can be fed in to `HodgeLattice` which will return the record `X` after completing the primitive periods and computing the (virtual) Hodge lattice.
+The output `X` of `PeriodHomotopy` can be fed in to `HodgeLattice`, which will return the record `X` after computing the (virtual) Hodge lattice. We recommend the following usage:
 
     Magma> X:=HodgeLattice(X);
 
-Here *virtual* refers to the fact that the computed lattice may in principle differ from the Hodge rank. This will happen if the precision of the period matrix has been computed to low precision. We will offer an analysis of the reliability of this method in an upcoming paper.
+Here *virtual* refers to the fact that the computed lattice may in principle differ from the correct Hodge rank. This will happen if the precision of the period matrix has been computed to low precision. We will offer an analysis of the reliability of this method in an upcoming paper.
 
-The attributes of the (virtual) Hodge lattice of `X` can be accessed as follows:
+The main attributes of the (virtual) Hodge lattice of `X` can be accessed as follows:
 
-    Magma> X`hodgeLattice`lattice;
-    Magma> X`hodgeLattice`polarization;
+    Magma> Lambda:=X`hodgeLattice;
+    Magma> Lambda`lattice;
+    Magma> Lambda`polarization;
 
 ## Examples
 
@@ -115,15 +120,17 @@ A polynomial of the form `c0*x0^d + ... + cn*xn^d` where `c0,..,cn` are non-zero
 
 ### Output
 
-Let `X` be the output of `PeriodHomotopy` as above. It is a record of type `PeriodBundle`. Once `PeriodHomotopy` has terminated, the following attributes of `X` are the most relevant.
+The output `X` of `PeriodHomotopy` is a record of type `PeriodBundle`. The following attributes of `X` should be of interest:
 
 ```
 X`deformation : contains the deformation path used in period homotopy. 
 X`cohomBasis : contains the polynomial part of the forms whose periods are to be computed, one list per family.
 X`odes : contains the ODEs corresponding to the periods of the forms in X`cohomBasis.
+X`primitivePeriods : the primitive periods of X.
+X`periods : the periods of X. When X is odd dimensional this coincides with the primitive periods of X.
 ```
 
-The main bulk of the output, including the initial conditions and transition matrices between families, is written in the file `current.sage`, where it is read by `integrator.sage`.
+Auxiliary data are written in the file `current.sage`, where it is read by `integrator.sage`. These data include initial conditions, transition matrices between families and the integration paths in the complex plane.
 
 ### Path finder
 
@@ -137,9 +144,9 @@ or
 
 Both have advantages and disadvantages. But we recommend that you use the second one only when the first one doesn't terminate.
 
-If either of these options are set, you can open the notebook `find_path.ipynb` and run the *first* block to see where the singularities of your families lie \(blue points\) and the path of integration \(red lines\).
+If either of these options are set, you can open the notebook `find_path.ipynb` and run the *first* block to see where the singularities of your families lie \(blue points\) and the rectilinear path of integration \(red lines\).
 
-If you want to edit the integration paths manually, open the file `current.sage` and change the end points of your rectilinear paths by setting `paths`.
+If you want to edit the integration paths manually, open the file `current.sage` and change the end points of your rectilinear paths by editing `paths`.
 
 ### Straight deformation
 
@@ -149,32 +156,32 @@ The following will turn off finding a randomized, monomial deformation path to t
 
 If you want to go straight from a hand picked Fermat type hypersurface `g` to `f` then type: 
 
-    Magma> ph := PeriodHomotopy([g,f]:straight:=true);
+    Magma> ph := PeriodHomotopy([g,f]);
 
 This option is not recommended for typical usage.
 
 ### Custom deformation path
 
-If you have a sequence of smooth degree `d` polynomials `f0,f1,..,fr` where `f0` is of Fermat type, then you can type in this sequence into `PeriodHomotopy`. For example, with a sequence of 5 elements:
+If you have a sequence of smooth, degree `d` polynomials `f0,f1,..,fr` where `f0` is of Fermat type, then you can type in this sequence into `PeriodHomotopy`. Here is an example with a sequence of 5 elements:
 
     Magma> PeriodHomotopy([f0,f1,f2,f3,f4,f5]);
 
-Then the period homotopy will be performed on this sequence with `f5` being the target hypersurface.
+The period homotopy will be performed on this sequence with `f5` being the target hypersurface and `fi`'s the only intermediate hypersurfaces.
 
 ### Non-random deformation path
 
-Set the option `randomizePath` to `false`.
+Set the option `randomizePath` to `false` to generate a path that will be the same across different runs:
 
     Magma> PeriodHomotopy([f]:randomizePath:=false);
 
 ### Precision
 
-If you want to increase or decrease the precision to which the integration is to be performed, set the `precision` option to the desired *number of digits*. By default we try to compute 100 digits of accuracy.
+If you want to increase or decrease the precision with which the integration is to be performed, set the `precision` option to the desired *number of digits*. By default we try to compute 100 digits of accuracy, you can increase it as follows:
 
     Magma> PeriodHomotopy([f]:precision:=500);
 
 ### Classical periods
 
-If for some reason you want the entire period matrix of the target hypersurface and not just the rows necessary to identify the Hodge decomposition, you can turn off the option `classicalPeriods`.
+If you want the entire period matrix of the target hypersurface and not just the rows necessary to identify the Hodge decomposition, you can turn off the option `classicalPeriods`:
 
     Magma> PeriodHomotopy([f]:classicalPeriods:=false);
