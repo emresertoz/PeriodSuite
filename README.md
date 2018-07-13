@@ -66,7 +66,7 @@ Navigate to the directory in which you have cloned this repository. Open a Magma
 Now you are set and can start using the code. We automatically define a few rings to start using the function but also to manipulate the output of the main function `PeriodHomotopy`. In particular `P` is already defined to be the polynomial ring with four variables `x,y,z,w`. These definitions are made in `suite.mag` --- feel free to remove them if you wish.
 
     Magma> f:=-4*x^4 + 7*x*y^3 + 2*z^3*w + 6*z^2*w^2 + 6*w^4;
-    Magma> ph:=PeriodHomotopy([f]);
+    Magma> X:=PeriodHomotopy([f]);
 
 Note the extra square brackets around `f`! See advanced usage below on how to give sequences to `PeriodHomotopy`.  
 

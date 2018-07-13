@@ -1,19 +1,42 @@
 load "suite.mag";
 
-// generating a smooth quartic surface
-f:=smoothHypersurface(P,4); f;
+// a simple example
+f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
 
 // finding the ODEs for the periods
 X:=PeriodHomotopy([f]);
 
 // after the ODEs have been integrated, we can compute the Hodge lattice
-load "lastPeriods";
-X`primitivePeriods:=periods;
-X`precision:=precision; // use the end precision of the periods
 X:=HodgeLattice(X);
 
-// a simple example
-f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
+LinesInK3Lattice(X`lat,X`pol);
+_,_,G1:=LinesInK3Lattice(X`lat,X`pol);
+
+CountLines(f);
+G2:=IncidenceOfLines(f); G2;
+
+
+
+
+/// a cubic fourfold
+P5<[X]>:=PolynomialRing(Rationals(),6);
+def:=[
+6*X[1]^3 + 4*X[2]^3 + 4*X[3]^3 + 3*X[4]^3 + 4*X[5]^3 + 9*X[6]^3,
+6*X[1]^3 + 4*X[2]^3 + 2*X[2]*X[3]^2 + 4*X[3]^3 + 3*X[4]^3 + 4*X[5]^3 +
+    9*X[6]^3,
+6*X[1]^3 + 10*X[1]*X[3]*X[5] + 4*X[2]^3 + 2*X[2]*X[3]^2 + 4*X[3]^3 +
+    3*X[4]^3 + 4*X[5]^3 + 9*X[6]^3,
+6*X[1]^3 + 10*X[1]*X[3]*X[5] + 9*X[1]*X[3]*X[6] + 4*X[2]^3 + 2*X[2]*X[3]^2 +
+    4*X[3]^3 + 3*X[4]^3 + 4*X[5]^3 + 9*X[6]^3
+];
+X:=PeriodHomotopy(def);
+X:=HodgeLattice(X);
+
+
+
+
+// generating a smooth quartic surface
+f:=smoothHypersurface(P,4); f;
 
 // schur, Picard rank 20
 f:=x*(x^3-y^3)-z*(z^3-w^3);
@@ -30,9 +53,9 @@ P4<[u]>:=PolynomialRing(Rationals(),5);
 f:=smoothHypersurface(P4,3);
 ph:=PeriodHomotopy([f]);
 
-//////////////////
-// a fourfold  //
-////////////////
+/////////////////////
+// cubic fourfold  //
+////////////////////
 P5<[X]>:=PolynomialRing(Rationals(),6);
 //f:=smoothHypersurface(P5,3:sparse:=7);
 // completely random, sparseish
@@ -45,9 +68,9 @@ repeat
   f:=&+[ Random(1,10) * m : m in rndm] ;
 until isSmooth(f); // startup function
 
-ph:=PeriodHomotopy([f]);
-load "lastPeriods";
-HodgeRank(M,80,20);
+X:=PeriodHomotopy([f]);
+
+X:=HodgeLattice(X);
 
 
 
@@ -125,4 +148,19 @@ def:=[
 9*x^5 - 2*x*y^4 + y^5 - 5*y*z^4 - 7*w^5,
 9*x^5 - 2*x*y^4 - 5*y*z^4 - 7*w^5,
 9*x^5 - 2*x*y^4 - y^3*z^2 - 5*y*z^4 - 7*w^5
+];
+
+
+
+// typically hard, but the following path is good
+// rank 14
+// lines generate this lattice
+f:= -8*x^3*z - 8*x*y*z^2 + 9*y^3*w + 9*z^4 + w^4;
+def:=[
+x^4 + y^4 + 9*z^4 + w^4,
+x^4 + y^4 + 9*y^3*w + 9*z^4 + w^4,
+x^4 + 9*y^3*w + 9*z^4 + w^4,
+x^4 - 8*x^3*z + 9*y^3*w + 9*z^4 + w^4,
+-8*x^3*z + 9*y^3*w + 9*z^4 + w^4,
+-8*x^3*z - 8*x*y*z^2 + 9*y^3*w + 9*z^4 + w^4
 ];

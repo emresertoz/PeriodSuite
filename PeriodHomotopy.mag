@@ -785,11 +785,12 @@ end function;
 // periods:  period matrix of X, completed from the primitive matrix by the addition of a "linear" class
 // primitiveIntersectionMatrix: intersection product on primitive homology wrt to the phamBasis and cohomBasis
 // intersectionMatrix: extension of primitive intersection matrix by the addition of a linear class to Fermat
+// precision: the precision for which the period matrix is known to be correct
 // polarization: coordinates of the hyperplane class wrt the basis of homology
 // hodgeLattice: (virtual) Hodge lattice, computed from the period matrix and the linear class
-// precision: the precision for which the period matrix is known to be correct
-// misc: intended to store the deformation family used to go to X, but also other data
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,polarization,hodgeLattice,precision,odes,deformation>;
+// lat: shorthand for X`hodgeLattice`lattice
+// pol: shorthand for X`hodgeLattice`polarization (this is different from polarization above)
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
 
 
 // main function
@@ -1061,7 +1062,7 @@ function completeHomology(X)
   // the hyperplane class
   // L = 1/d hyp + kappa
   // hyp = d*L - d*kappa
-  X`polarization:= HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]]));
+  X`polarization:= Matrix(HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]])));
 
   return X; 
 end function;
@@ -1188,11 +1189,13 @@ lattice:=Matrix(basis)*IM*Transpose(Matrix(basis));
 //polarization, in the coordinates of the lattice
 Lambda:=LatticeWithBasis(Matrix(basis));
 hyp:=hyp[1]; // one-row-matrix is converted to a vector
-polarization:=Vector(Coordinates(Lambda!hyp));
+polarization:=Matrix([Coordinates(Lambda!hyp)]);
 
 hdgLattice := rec<virtualLattice | rank:=rho, lattice:=lattice, basis:=basis, degrees:=degrees, parameters:=[precision,offsetPrecision], polarization:=polarization>;
 
   X`hodgeLattice:=hdgLattice;
+  X`lat:=lattice;
+  X`pol:=polarization;
 
   return X,rho,lattice;
 end function;

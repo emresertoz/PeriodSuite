@@ -158,6 +158,13 @@ x^5 + x*z*w^3 + y^5 + z^4*w + w^5,
 x^5 + x*z*w^3 + y^5 + z^4*w
 ];
 
+//asphalt suggested this
+def2:=[
+x^5 + y^5 + z^5 + w^5,
+x^5 + x*z*w^3 + y^5 + z^5 + w^5,
+x^5 + x*z*w^3 + y^5 + z^4*w
+];
+
 
 // Curve of high genus
 load "suite.mag";
