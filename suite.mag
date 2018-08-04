@@ -3,7 +3,7 @@ pathToSuite:="/Users/sertoez/git-projects/period-suite/";
 /////////////////////////////////////////////////////////////////////////////
 
 // If you have Pierre Lairez's Period function available, set the following to: true
-lairezAvailable:=true;
+lairezAvailable:=false;
 // and write the path to his "PF.spec" file
 lairezSpec:="periods-lairez/src/PF.spec";
 
