@@ -303,26 +303,23 @@ function computeDerivatives(numerator,f0,f1,desiredDerivatives : withFactorial:=
 end function;
 
 
-//helper function
-// b in [0..d-1]
-function ee(b)
-  if b eq 0 then 
-    return 1; 
-  elif b eq 1 then 
-    return -1; 
-  else 
-    return 0;
-  end if;
-end function;
-
 // Theorem 1.3 of Shimada
 // note that beta's always have 0 at the last entry
 // and this entry should be dropped when using these formulas
 function cap(beta1,beta2,d)
   N := #beta1; // N := n+2;
-  beta := [ (beta2[i] - beta1[i]) mod d : i in [1..(N-1)]];
+  // take beta1 to the other side
+  beta:=[ beta2[i] - beta1[i] : i in [1..N]];
+  //Changing from their coordinates to mine requires a translation
+  g:=SymmetricGroup(N)!([N] cat [1..(N-1)]);
+  beta:=PermuteSequence(beta,g);
+  // divide by the action on the last coordinate, everything is modulo d
+  beta:=[ (beta[i] - beta[N]) mod d : i in [1..(N-1)]];
+  // this is used as part of the formula
   betaShift := [ (b+1) mod d : b in beta];
-  return (-1)^(Integers()!((N-2)*(N-1)/2)) * (&*[ee(b) : b in beta] - &*[ee(b) : b in betaShift]);
+  // helper function of Shimada
+  eps:=func<b| case<b mod d| 0:1, 1:-1, default:0>>;
+  return (-1)^(Integers()!((N-2)*(N-1)/2)) * (&*[eps(b) : b in beta] - &*[eps(b) : b in betaShift]);
 end function;
 
 // intersection matrix for pham cycles
