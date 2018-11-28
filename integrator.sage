@@ -1,7 +1,7 @@
 #######################################################
 #### Set this value to the directory of period-suite ##
 #######################################################
-pathToSuite="/Users/sertoez/git-projects/period-suite/"
+pathToSuite="/path/to/suite/"; ##### do not forget "/" at the end!
 #######################################################
 
 import time

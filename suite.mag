@@ -1,11 +1,11 @@
 //////// Type the correct path to this directory here ///////////////////////
-pathToSuite:="/Users/sertoez/git-projects/period-suite/";
+pathToSuite:="/path/to/suite/"; /// do not forget "/" at the end!
 /////////////////////////////////////////////////////////////////////////////
 
 // If you have Pierre Lairez's Period function available, set the following to: true
 lairezAvailable:=false;
 // and write the path to his "PF.spec" file
-lairezSpec:="periods-lairez/src/PF.spec";
+lairezSpec:="lairez-periods/src/PF.spec";
 
 // Load the main files
 
