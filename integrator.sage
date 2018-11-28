@@ -57,7 +57,7 @@ for j in [1..steps]:
         if j==1:
             init=Matrix(inits[i-1]);
             a = init.nrows(); b = init.ncols();
-            init =  MatrixSpace(ComplexBallField(2000), a, b)(init);
+            init =  MatrixSpace(ComplexBallField(round(log(10^precision)/log(2))), a, b)(init);
         else:
             init=Matrix(rawInits[j-2][i-1])*cohomologies[j-2];
         transitionMatrix=transitionMatricies[i-1];
