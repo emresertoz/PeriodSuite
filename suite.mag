@@ -1,4 +1,4 @@
-pathToSuite:="/path/to/suite/";
+pathToSuite:="/Users/sertoez/git-projects/development-period-suite/";
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -1109,7 +1109,7 @@ end intrinsic;
 // pol: shorthand for X`hodgeLattice`polarization (this is different from polarization above)
 PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
 
-intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=1, reduce_initials:=true) -> Any
+intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
 
   if straight then
@@ -1121,7 +1121,7 @@ intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_
   return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials);
 end intrinsic;
 
-intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=1, integrationPaths:=[], reduce_initials:=true) -> Any
+intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true) -> Any
 {
   Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
 }
@@ -1530,7 +1530,7 @@ intrinsic test() -> Rec
   4*x^4 - 6*x*w^3 + 2*y^4 - 6*z^4,
   4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4
   ];
-  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=1);
+  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0);
   //f:=4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4;
   //PeriodHomotopy(f : pathfinder:=1);
 end intrinsic;

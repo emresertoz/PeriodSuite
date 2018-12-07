@@ -1,4 +1,4 @@
-pathToSuite="/path/to/suite/";
+pathToSuite="/Users/sertoez/git-projects/development-period-suite/";
 ivpdir=pathToSuite+"incinerator/";
 ncpus=100
 
