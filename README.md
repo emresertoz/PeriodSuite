@@ -32,7 +32,7 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
 
 The installation is now complete. To use period-suite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
 
-    Magma> Attach("/path/to/period-suite/suite.mag")
+    Magma> Attach("suite.mag")
     Magma> X:=test();
 
 #### Remarks:
