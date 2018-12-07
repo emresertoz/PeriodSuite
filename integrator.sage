@@ -1,117 +1,87 @@
-#######################################################
-#### Set this value to the directory of period-suite ##
-#######################################################
-pathToSuite="/path/to/suite/"; ##### do not forget "/" at the end!
-#######################################################
+pathToSuite="/Users/sertoez/git-projects/2018-12-01--period-suite2/";
+ivpdir=pathToSuite+"incinerator/";
+ncpus=100
+
+print("Beginning integration...")
+load(ivpdir+"meta.sage")
 
 import time
 from ore_algebra import *
 DOP, t, D = DifferentialOperators()
-# The following may be overridden in input file, but need not be specified there
-#
-#
-precision=100; # will be OVERRIDDEN by user specified precision, under normal usage
-# if increasing this precision manually, do not forget to recompute initial conditions to higher precision.
-#
-#
-#
-precisionList=[]; # if left empty, every ODE will be integrated using the same precision
-paths=[]; #unless overridden we will convert this to a list of straight paths
 
-t0=time.time();
-load(pathToSuite+"current.sage")
-t1=time.time();
-print "Loaded file in", t1-t0, "seconds";
-steps=len(allODEs);
-cohomologies=[];
-allTransMats=[1..steps];
+@parallel(ncpus=ncpus)
+def integrate_ode(ode_label):
+    load(ode_label)
+    tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+    print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
+    M=Matrix(init)
+    if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
+      M=MatrixSpace(tm.base_ring(),M.nrows(),M.ncols())(M)
+    TM=tm.row(0)*M
+    return [[x.mid() for x in TM],[x.diameter() for x in TM],label]
 
-if len(paths)==0:
-    paths=[[0,1] for j in [1..steps]]
+field=ComplexBallField(round(log(10^(precision+10))/log(2)))
+def convert_to_matrix_with_error(matrix,error):
+    new_matrix=MatrixSpace(field,matrix.nrows(),matrix.ncols())(matrix)
+    for i in [1..matrix.nrows()]:
+      for j in [1..matrix.ncols()]:
+        new_matrix[i-1,j-1]=new_matrix[i-1,j-1].add_error(error[i-1,j-1]) 
+    return new_matrix
+
+## Transition matrices but without intermediate base changes
+tms={}
+
+t0=time.time()
+ivps=[]
+for file in os.listdir(ivpdir):
+  if file.startswith("IVP-") and file.endswith(".sage"):
+    ivps.append(os.path.join(ivpdir,file))
+ivps.sort()
+## most time consuming part
+for solution in integrate_ode(ivps):
+    tms[solution[-1][-1]]=solution[-1][0:2]
+print "Integration completed in",time.time()-t0,"seconds."
+
+## Transition matrices made compatible with base changes
+base_change_files=[]
+for file in os.listdir(ivpdir):
+  if file.startswith("BaseChange-") and file.endswith(".sage"):
+    base_change_files.append(os.path.join(ivpdir,file))
+base_change_files.sort()
+
+t0=time.time()
+keys=tms.keys()
+steps=len(base_change_files)
+compatible_tms=[1..steps]
+
+print "rearranging the matrices"
+for i in [1..steps]:
+    nrows=max([k[1] for k in keys if k[0] == i])
+    ncols=len(tms[(i,1)][0])
+    tm=Matrix([tms[(i,j)][0] for j in [1..nrows]])
+    err=Matrix([tms[(i,j)][1] for j in [1..nrows]])
+    tm_with_error=convert_to_matrix_with_error(tm,err)
+    load(base_change_files[i-1])
+    compatible_tms[i-1]=change_coordinates*tm_with_error
     
-if len(precisionList)==0:
-    precisionList=[10^-precision for j in [1..steps]]
+compatible_tms.reverse()
+period_tm=prod(compatible_tms)
 
+# reduce is in the meta file designating if the initial conditions have been reduced to the periods of the Fermat hypersurface or were precomputed already
+if reduce:
+  print "Computing periods of Fermat"
+  t0=time.time()
+  load(pathToSuite+"fermat_periods.sage")
+# fermat_type and the degree d of fermat are loaded from the file "meta.sage"
+  fermat_period_matrix=periods_of_fermat(fermat_type)
+  print "Fermat periods computed in", time.time() -t0, "seconds."
+  fpm_rows=fermat_period_matrix.nrows()
+  fpm_cols=fermat_period_matrix.ncols()
+  fpm=MatrixSpace(field,fpm_rows,fpm_cols)(fermat_period_matrix);
+  periods=period_tm*fpm
+else:
+  periods=period_tm
 
-t0=time.time();
-
-
-print "Integrating systems", 1, "through", steps;
-for j in [1..steps]:
-    noOfdeqs=len(allODEs[j-1]);
-    deqs=[deq.numerator() for deq in allODEs[j-1][0:noOfdeqs]];
-    print "\nIntegrating system number", j;
-    transitionMatricies = []
-    for i in [1..noOfdeqs]:
-        tt0=time.time()
-        tm=deqs[i-1].numerical_transition_matrix(paths[j-1], precisionList[j-1],assume_analytic=true)
-        print "\tODE number", i, "took", time.time()-tt0, "seconds to integrate"
-        transitionMatricies=transitionMatricies+[tm]
-    allTransMats[j-1]=transitionMatricies;
-    print "Maximal error in transition matricies:"
-    print [max(tm.apply_map(lambda x : x.diameter()).list()) for tm in transitionMatricies]
-    print "The largest error:"
-    print max([max(tm.apply_map(lambda x : x.diameter()).list()) for tm in transitionMatricies])
-    cohomology=[1..noOfdeqs];
-    for i in [1..noOfdeqs]:
-        if j==1:
-            init=Matrix(inits[i-1]);
-            a = init.nrows(); b = init.ncols();
-            init =  MatrixSpace(ComplexBallField(round(log(10^precision)/log(2))), a, b)(init);
-        else:
-            init=Matrix(rawInits[j-2][i-1])*cohomologies[j-2];
-        transitionMatrix=transitionMatricies[i-1];
-        cohomology[i-1]=(transitionMatrix * init).row(0);
-    cohomologies=cohomologies+[Matrix(cohomology)];
-    
-periodsWithError=Matrix(cohomologies[-1].rows()[0:noOfdeqs]);
-maximalError=max(periodsWithError.apply_map(lambda x : x.diameter()).list());
-periods=periodsWithError.apply_map(lambda x : x.mid());
-print "\nAccumulated maximal error:", maximalError
-t1=time.time();
-print "\nIntegration took", t1-t0, "seconds in total.\n"
-#print Matrix(periods).str()
-
-
-# Write the periods to file
-    
-outputFile = open(pathToSuite+"lastPeriods",'w')
-
-precision=-maximalError.log(10).round()
-outputFile.write(str(precision)+"\n")
-
-digits=ceil(precision/100)*100;
-outputFile.write(str(digits)+"\n")
-
-bits=ceil(log(10^digits)/log(2))+10
-Rr=RealField(bits)
-def print_number(num):
-    re=Rr(num.real())
-    im=Rr(num.imag())
-    re_str=abs(re).str(digits=digits,no_sci=2)+"p"+str(digits)
-    im_str=abs(im).str(digits=digits,no_sci=2)+"p"+str(digits)+"*I"
-    if re.is_square():
-        num_str=re_str
-    else:
-        num_str="-"+re_str
-    if im.is_square():
-        num_str=num_str+"+"+im_str
-    else:
-        num_str=num_str+"-"+im_str
-    return num_str
-
-numrows=periods.nrows()
-numcols=periods.ncols()
-
-prefix="Matrix(CC," +str(numrows) +","+str(numcols)+", [CC|"
-
-numels=numrows*numcols
-flat_periods=periods.list()
-mat=print_number(flat_periods[0])
-
-for i in [1..(numels-1)]:
-    mat=mat+","+print_number(flat_periods[i])
-    
-outputFile.write(prefix+mat+"])")
-outputFile.close()
+# records the period matrix for magma to read
+load(pathToSuite+"to_magma.sage")
 
