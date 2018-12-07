@@ -18,7 +18,7 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
     git clone https://github.com/period-suite/period-suite.git /path/to/period-suite
     ```
 
-2) Change the current directory to the directory which you cloned this repository and type "./make".
+2) Change the current directory to the cloned repository and type `./make`.
 
     ```
     cd /path/to/period-suite && ./make
