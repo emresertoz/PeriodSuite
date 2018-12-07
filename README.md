@@ -14,15 +14,21 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
 
 1) Clone this repository to a directory.
 
+    ```
     git clone https://github.com/period-suite/period-suite.git /path/to/period-suite
+    ```
 
 2) Change the current directory to the directory which you cloned this repository and type "./make".
 
+    ```
     cd /path/to/period-suite && ./make
+    ```
 
 3) Install `ore_algebra--analytic` for the integration step.
 
+    ```
     sage -pip install --user git+https://github.com/mkauers/ore_algebra.git@analytic
+    ```
 
 The installation is now complete. To use period-suite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
 
@@ -67,7 +73,7 @@ The output `X` of `PeriodHomotopy` can be fed in to `HodgeLattice`, which will r
 
     Magma> X:=HodgeLattice(X);
 
-Here *virtual* refers to the fact that the computed lattice may in principle differ from the correct Hodge rank. This will happen if the precision of the period matrix has been computed is too low. 
+Here *virtual* refers to the fact that the computed lattice may in principle differ from the correct Hodge rank. This will happen if the precision of the period matrix is too low. 
 
 The main attributes of the (virtual) Hodge lattice of `X` can be accessed as follows:
 
