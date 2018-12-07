@@ -1,4 +1,4 @@
-pathToSuite="/Users/sertoez/git-projects/development-period-suite/";
+pathToSuite="/path/to/suite";
 ivpdir=pathToSuite+"incinerator/";
 ncpus=100
 
@@ -9,6 +9,8 @@ import time
 from ore_algebra import *
 DOP, t, D = DifferentialOperators()
 
+field=ComplexBallField(round(log(10^(precision+10))/log(2))+100)
+
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
     load(ode_label)
@@ -16,11 +18,10 @@ def integrate_ode(ode_label):
     print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
-      M=MatrixSpace(tm.base_ring(),M.nrows(),M.ncols())(M)
+      M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM=tm.row(0)*M
     return [[x.mid() for x in TM],[x.diameter() for x in TM],label]
 
-field=ComplexBallField(round(log(10^(precision+10))/log(2)))
 def convert_to_matrix_with_error(matrix,error):
     new_matrix=MatrixSpace(field,matrix.nrows(),matrix.ncols())(matrix)
     for i in [1..matrix.nrows()]:

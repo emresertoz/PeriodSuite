@@ -1,4 +1,4 @@
-pathToSuite:="/Users/sertoez/git-projects/development-period-suite/";
+pathToSuite:="/path/to/suite";
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
