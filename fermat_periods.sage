@@ -42,14 +42,17 @@ def compute_inverse_roots(fermat_type):
     global scalars
     scalars=[root_values[i] for i in fermat_type[0:-1]]
     scalars.append(root_values[-fermat_type[-1]])
-    
+
+
 def alpha_beta(alpha,beta):
+    l=sum(alpha)/d
+    scalar0=prod([(1-alpha[-1]/(j*d)) for j in [1..(l-1)]])
     scalar1=prod([scalars[i]^alpha[i] for i in [0..(len(alpha)-1)]])
     scalar2=prod([(1-xi^-a)/d for a in alpha[0:-1]])
     scalar3=xi^sum([alpha[i]*beta[i] for i in [0..(len(alpha)-1)]])
     scalar4=prod(gamma_values[a/d] for a in alpha[0:-1])/gamma_values[sum([a/d for a in alpha[0:-1]])]
-    return scalar1*scalar2*scalar3*scalar4
-
+    return scalar0*scalar1*scalar2*scalar3*scalar4
+    
 def periods_of_fermat(fermat_type):
     n=len(fermat_type)-2
     # load alphas and betas
