@@ -32,7 +32,7 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
 
 The installation is now complete. To use period-suite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
 
-    Magma> Attach("suite.mag")
+    Magma> Attach("suite.mag");
     Magma> X:=test();
 
 #### Remarks:
@@ -58,12 +58,16 @@ Now you may call the function `PeriodHomotopy` on this polynomial as follows:
 
     Magma> X:=PeriodHomotopy(f);
 
-To access the periods of the hypersurface and to the number of digits to which the periods are correct, type:
+To increase precision, set the `precision` parameter to the desired number of digits. The default value is 100.
+
+    Magma> X:=PeriodHomotopy(f : precision:=500);
+
+To access the periods of the hypersurface and the number of digits to which the periods are correct, type:
 
     Magma> X`periods;
     Magma> X`precision;
 
-The integral basis for homology is only implicit. However, the basis for cohomology used for the period matrix is explicit and can be accessed by typing:
+ The integral basis for homology is only implicit. However, the basis for cohomology used for the period matrix is explicit and can be accessed by typing:
 
     Magma> X`cohomBasis;
 
@@ -136,9 +140,3 @@ If you have a sequence of smooth, degree `d` polynomials `f0,f1,..,fr` where `f0
     Magma> PeriodHomotopy([f0,f1,f2,f3,f4,f5]);
 
 The period homotopy will be performed on this sequence with `f5` being the target hypersurface and `fi`'s the only intermediate hypersurfaces.
-
-### Precision
-
-If you want to increase or decrease the precision with which the integration is to be performed, set the `precision` option to the desired *number of digits*. By default we try to compute 100 digits of accuracy, you can increase it as follows:
-
-    Magma> PeriodHomotopy(f:precision:=500);
