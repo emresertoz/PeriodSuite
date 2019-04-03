@@ -687,7 +687,7 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
 }
 
   v:=periodMatrix;
-  CC<I>:=Parent(v[1,1]);
+  CC<I>:=ComplexField(Precision(v[1,1]));
 
   precision:=precision-5;
   offsetPrecision:=offset;
@@ -736,7 +736,6 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
   realError:=Matrix(realError);
   imagError:=Matrix(imagError);
 
-
   // decide which relations are acceptable, if we trust our precision 100%!
   goodRelations:=[];
   for i in [1..Nrows(B)] do
@@ -755,7 +754,7 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
   firstRowLength:=Maximum([#Sprint(errorField!Sqrt(Norm(B[j]))) : j in [1..Nrows(B)]]);
 
   j:=1;
-  num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
+  //num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
   //print num,"||", "---hyperplane section---";
 while (j le Nrows(B)) do
     num:=Sprint(j);
@@ -1112,7 +1111,8 @@ end intrinsic;
 // pol: shorthand for X`hodgeLattice`polarization (this is different from polarization above)
 // loopBegins,loopEnds: the periods of a hypersurface near the singular target hypersurface, before and after a looping around the target
 // primitiveToComplete: transition matrix for converting primitive periods to complete periods
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
+// monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
 
 intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
@@ -1191,13 +1191,14 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 
   if target_is_smooth then
     bundle`primitivePeriods,bundle`precision:=loadPeriods("periods");
+    bundle:=PrimitiveToComplete(bundle);
+    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
   else
-    bundle`loopBegins,bundle`precision:=loadPeriods("periods1");
+    bundle`loopBegins:=loadPeriods("periods1");
+    // precision is worst at the end
     bundle`loopEnds,bundle`precision:=loadPeriods("periods2");
+    bundle:=PrimitiveToComplete(bundle);
   end if;
-
-
-  bundle:=completeHomology(bundle);
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
@@ -1342,6 +1343,9 @@ intrinsic SetupIntegrationPath(f0::RngMPolElt,f1::RngMPolElt, pathfinder::RngInt
 Computes a sequence of rectilinear paths in the complex plane avoiding any singular fibers in the family of hypersurfaces (1-t)*f1+t*f0.
 }
 
+  Cc:=ComplexField(10);
+  AssignNames(~Cc,["I"]);
+
   if f1_is_smooth then
     PathFinder:=case<pathfinder| 1:PathFinder1, default:PathFinder0>;
     path,avoid:=PathFinder(f0,f1);
@@ -1352,11 +1356,9 @@ Computes a sequence of rectilinear paths in the complex plane avoiding any singu
     path,avoid,loop_position:=PathFinder(f0,f1);
     avoidPoints:=avoid;
   end if;
-  Cc:=ComplexField(10);
-  AssignNames(~Cc,["I"]);
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
   integrationPath[1]:=Sprint(0);
-  integrationPath[#integrationPath]:=Sprint(1);
+  if f1_is_smooth then integrationPath[#integrationPath]:=Sprint(1); end if;
   return integrationPath,avoidPoints,loop_position;
 
 end intrinsic;
@@ -1676,78 +1678,6 @@ intrinsic PrimitiveToComplete(X::Rec) -> Any
   return X;
 end intrinsic;
 
-// input: a PeriodBundle record X
-// output: X, with the intersection matrix on the entire homology of X, as well as the periods extended to entire homology
-intrinsic completeHomology(X::Rec) -> Rec
-{
-  Takes a period bundle with primitive homology and completes it to the entire homology by the addition of a class representing a linear space in Fermat.
-}
-  // if dimension is odd, primitive homology coincides with homology
-  if X`dimension mod 2 eq 1 then
-    X`periods:=X`primitivePeriods;
-    X`intersectionMatrix:=X`primitiveIntersectionMatrix;
-    return X;
-  end if;
-
-  periods:=X`primitivePeriods;
-  CC<I>:=Parent(periods[1,1]);
-  d:=X`degree;
-  n:=X`dimension;
-  phamB:=X`phamBasis;
-  IM:=ChangeRing(X`primitiveIntersectionMatrix,Rationals());
-  
-  // Using:
-  // Degtyarev and Shimada intersection numbers
-  // Theorem 2.2, arXiv:1405.4683v3
-  // for explanations see: Lairez, Sertoz -- Numerical Hodge Rank
-
-  // the helper tau function
-  function tau(i)
-    if i mod (2*d) eq 1 then return 1;
-    elif i mod (2*d) eq 2*d-1 then return -1;
-    end if;
-    return 0;
-  end function;
-
-  // L is the class of a particular linear subscheme of half-dimension in Fermat.
-  function intersectLwith(beta)
-    return tau(2*beta[n+1]-2*beta[n+2]-1)*&*[tau(2*beta[2*i-1] - 2*beta[2*i] + 1) : i in [1..(n/2)]];
-  end function;
-
-  // We will now compute the projection of L into the primitive homology.
-  intL:=Matrix([[intersectLwith(beta) : beta in phamB]]);
-  IMinv:=Determinant(IM)^(-1)*Adjoint(IM);
-  kappa:=ChangeRing(intL,Rationals())*IMinv;
-
-  //self intersection of kappa
-  kappaSelfIntersection:= kappa*IM*Transpose(kappa);
-
-  // L = 1/d hyp + kappa
-  // since hyp^2 = d
-  // L^2 = 1/d + kappa^2 
-  LSelfIntersection:=Integers()!(kappaSelfIntersection[1,1]+1/d);
-
-  // periods of L (equivalently of kappa) are readily computed from its coordinates in the Pham basis
-  Lperiods:=periods*Transpose(ChangeRing(kappa,CC));
-  allPeriods:=HorizontalJoin(periods,Lperiods);
-  X`periods:=allPeriods;
-
-  // form the intersection matrix for homology by using L^2 and intL
-  fullIM:=VerticalJoin(X`primitiveIntersectionMatrix,intL);
-  temp:=Transpose(HorizontalJoin(intL,Matrix([[LSelfIntersection]])));
-  fullIM:=HorizontalJoin(fullIM,temp);
-  X`intersectionMatrix:=fullIM;
-
-  // the hyperplane class
-  // L = 1/d hyp + kappa
-  // hyp = d*L - d*kappa
-  X`polarization:= Matrix(HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]])));
-
-  return X;
-
-end intrinsic;
-
-
 // hodge lattice
 // rank: rank of the Hodge lattice
 // lattice: the intersection matrix of the lattice
@@ -1854,4 +1784,61 @@ intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
 
   // third entry records the position of the loop head
   return path_before_loop_head cat loop_head, sings, #path_before_loop_head+1;
+end intrinsic;
+
+
+intrinsic multiply(A::Any,B::Any) -> Any
+{
+  Try computing A*B by coercing the coefficients of B into the ring of A and, if this fails, then the other way around.
+}
+  try 
+    return A*ChangeRing(B,Parent(A[1,1]));
+  catch e
+    return ChangeRing(A,Parent(B[1,1]))*B;
+  end try;
+  error "Entries of neither matrix can be coerced into the ring of the entries of the other matrix.";
+end intrinsic;
+
+intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt) -> Any,Any,Any
+{
+  Given two complex floating point matrices M and N of the same size (with "precision" number of digits reliable), find small invertible integral matrices B1,B2 such that MB1=NB2. We return B1,B2,B2*B1inv.
+}
+  try
+    N:=Parent(M)!N;
+  catch e
+    M:=Parent(N)!M;
+  end try;
+  _,rels:=LatticeOfRelations(HorizontalJoin(M,N),precision);
+  try 
+    ncol:=Ncols(M); nrow:=Nrows(M); // assumed to be the same with N
+    rels:=Matrix(rels);
+    B1:=Transpose(ExtractBlock(rels,1,1,ncol,nrow));
+    B2:=-Transpose(ExtractBlock(rels,1,1+ncol,ncol,nrow));
+    //assert (Determinant(B1) ne 0) and (Determinant(B2) ne 0);
+    F:=CoefficientRing(Parent(M));
+    b1:=ChangeRing(B1,F);
+    b2:=ChangeRing(B2,F);
+    b:=b2*Inverse(b1);
+    ZB:=Matrix([[Round(b[i,j]) : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
+    B:=Matrix([[F|ZB[i,j] : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
+    errorRing<I>:=ComplexField(1);
+    // WARNING: Scaling the error to exaggerate size.
+    scale:=10^precision;
+    allErrors:=Eltseq(ChangeRing(scale*(Matrix(M) - Matrix(N)*B),errorRing));
+    maximumError:=SquareRoot(Maximum([Norm(e): e in allErrors]));
+    print "If the result is reliable, error should be around 1. Anything less is an indication of a stronger match. If there is no match, expect an error of magnitude 10^"*Sprint(precision)*".";
+    print "Obtained an error of:", maximumError, "\n";
+  catch e
+    error "It seems, these matrices are not related by a monodromy.";
+  end try;
+  return B1,B2,ZB;
+end intrinsic;
+
+intrinsic PicardLefschetz(X::Any) -> Any
+{
+  Assuming X was a PeriodBundle computed with singular target, this function will compute the the monodromy operator around the target in the final family, and attach it to X.
+}
+  _,_,ZB:=Monodromy(X`loopEnds,X`loopBegins,X`precision);
+  X`monodromy:=ZB;
+  return X;
 end intrinsic;

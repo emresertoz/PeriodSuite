@@ -20,7 +20,7 @@ def integrate_ode(ode_label):
     print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
-      M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
+        M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM=tm.row(0)*M
     return [[x.mid() for x in TM],[x.diameter() for x in TM],False,label]
 
@@ -34,17 +34,17 @@ def integrate_ode_with_loop(ode_label):
     print "\tODE", label, "is completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
-      M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
+        M=MatrixSpace(ComplexBallField(tm1.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM1=tm1.row(0)*M
-    TM2=(tm2*tm1).row(0)*M
+    TM2=(tm2.row(0)*tm1)*M
     return [[[x.mid() for x in TM1],[x.diameter() for x in TM1]],[[x.mid() for x in TM2],[x.diameter() for x in TM2]],True,label]
     
 
 def convert_to_matrix_with_error(matrix,error):
     new_matrix=MatrixSpace(field,matrix.nrows(),matrix.ncols())(matrix)
     for i in [1..matrix.nrows()]:
-      for j in [1..matrix.ncols()]:
-        new_matrix[i-1,j-1]=new_matrix[i-1,j-1].add_error(error[i-1,j-1]) 
+        for j in [1..matrix.ncols()]:
+            new_matrix[i-1,j-1]=new_matrix[i-1,j-1].add_error(error[i-1,j-1]) 
     return new_matrix
 
 def compute_periods_of_fermat():
@@ -64,9 +64,9 @@ def output_to_file(periods,filename):
     periods_mid=periods.apply_map(lambda x : x.mid());
     print "Accumulated maximal error:", maximal_error
     if maximal_error == 0:
-      attained_precision=precision
+        attained_precision=precision
     else:
-      attained_precision=-maximal_error.log(10).round()
+        attained_precision=-maximal_error.log(10).round()
     output_file.write(str(attained_precision)+"\n")
     digits=ceil(attained_precision*1.2);
     output_file.write(str(digits)+"\n")
@@ -75,8 +75,8 @@ def output_to_file(periods,filename):
     numrows=periods_mid.nrows()
     numcols=periods_mid.ncols()
     for i in [1..numrows]:
-      output_file.write(str(periods_mid[i-1].list()))
-      if i < numrows: output_file.write("\n")
+        output_file.write(str(periods_mid[i-1].list()))
+        if i < numrows: output_file.write("\n")
     output_file.close()
 
 
@@ -90,15 +90,15 @@ loops={}
 t0=time.time()
 ivps=[]
 for file in os.listdir(ivpdir):
-  if file.startswith("IVP-") and file.endswith(".sage"):
-    ivps.append(os.path.join(ivpdir,file))
+    if file.startswith("IVP-") and file.endswith(".sage"):
+        ivps.append(os.path.join(ivpdir,file))
 ivps.sort()
 ## most time consuming part
 for solution in integrate_ode(ivps):
     has_loop=solution[-1][2]
     label=solution[-1][-1]
     if has_loop:
-        # has different format
+        # output has different format
         tms[label]=solution[-1][0]
         loops[label]=solution[-1][1]
     else:
@@ -108,8 +108,8 @@ print "Integration completed in",time.time()-t0,"seconds."
 ## Transition matrices made compatible with base changes
 base_change_files=[]
 for file in os.listdir(ivpdir):
-  if file.startswith("BaseChange-") and file.endswith(".sage"):
-    base_change_files.append(os.path.join(ivpdir,file))
+    if file.startswith("BaseChange-") and file.endswith(".sage"):
+        base_change_files.append(os.path.join(ivpdir,file))
 base_change_files.sort()
 
 t0=time.time()
@@ -130,24 +130,25 @@ compatible_tms.reverse()
 
 
     
-if len(loops) > 0:
+if len(loops) == 0:
+    output_to_file(prod(compatible_tms),"periods")
+else:
     loop_keys=loops.keys()
+    loop_keys.sort()
     tm=Matrix([loops[key][0] for key in loop_keys])
     err=Matrix([loops[key][1] for key in loop_keys])
     tm_with_error=convert_to_matrix_with_error(tm,err)
     index=loop_keys[0][0]
     load(base_change_files[index-1])
     loop_tm=change_coordinates*tm_with_error
-    # reduce is in the meta file designating if the initial conditions have been reduced
-    # to the periods of the Fermat hypersurface or were precomputed already
+    # reduce is in the meta file. if true then initial conditions have been reduced
+    # to the periods of the Fermat hypersurface
     if reduce:
         fpm=compute_periods_of_fermat()
         intermediate=prod(compatible_tms[1:])*fpm
     else:
         intermediate=prod(compatible_tms[1:])
-    loop_end=loop_tm*intermediate
     loop_begin=compatible_tms[0]*intermediate
+    loop_end=loop_tm*intermediate
     output_to_file(loop_begin,"periods1")
     output_to_file(loop_end,"periods2")
-else:
-    output_to_file(prod(compatible_tms),"periods")

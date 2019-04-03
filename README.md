@@ -140,3 +140,15 @@ If you have a sequence of smooth, degree `d` polynomials `f0,f1,..,fr` where `f0
     Magma> PeriodHomotopy([f0,f1,f2,f3,f4,f5]);
 
 The period homotopy will be performed on this sequence with `f5` being the target hypersurface and `fi`'s the only intermediate hypersurfaces.
+
+### Monodromy / Picard-Lefschetz
+
+If you would like to compute the monodromy operator of going counterclockwise around a singular hypersurface, then you can do so using PeriodHomotopy which uses the periods of nearby fibers. If you give a singular target hypersurface, this intention is understood and the necessary computations are performed. For example:
+
+    Magma> P2<a,b,c>:=PolynomialRing(Rationals(),3);
+    Magma> def:=[a^3+b^3+c^3,a*b*c];
+    Magma> X:=PeriodHomotopy(def : straight:=true);
+    Magma> X:=PicardLefschetz(X);
+    Magma> X`monodromy;
+
+If you are reading this, then you are on an experimental branch. Please let me know of any bugs you encounter.
