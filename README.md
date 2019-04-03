@@ -145,9 +145,9 @@ The period homotopy will be performed on this sequence with `f5` being the targe
 
 If you would like to compute the monodromy operator of going counterclockwise around a singular hypersurface, then you can do so using PeriodHomotopy which uses the periods of nearby fibers. If you give a singular target hypersurface, this intention is understood and the necessary computations are performed. For example:
 
-    Magma> P2<a,b,c>:=PolynomialRing(Rationals(),3);
-    Magma> def:=[a^3+b^3+c^3,a*b*c];
-    Magma> X:=PeriodHomotopy(def : straight:=true);
+    Magma> P3<x,y,z,w>:=PolynomialRing(Rationals(),4);
+    Magma> def:=[ x^4 - y^4 - z^4 - w^4, x^4 - y^4 - y^2*z^2 - z^4 - w^4, x^4 - y^2*z^2 ];
+    Magma> X:=PeriodHomotopy(def : bound_pole_order:=false, precision:=100);
     Magma> X:=PicardLefschetz(X);
     Magma> X`monodromy;
 
