@@ -1819,7 +1819,7 @@ intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt) -> Any,Any,Any
     b1:=ChangeRing(B1,F);
     b2:=ChangeRing(B2,F);
     b:=b2*Inverse(b1);
-    ZB:=Matrix([[Round(b[i,j]) : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
+    ZB:=Matrix([[Integers()|Round(b[i,j]) : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
     B:=Matrix([[F|ZB[i,j] : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
     errorRing<I>:=ComplexField(1);
     // WARNING: Scaling the error to exaggerate size.
