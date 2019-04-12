@@ -77,7 +77,7 @@ The output `X` of `PeriodHomotopy` can be fed in to `HodgeLattice`, which will r
 
     Magma> X:=HodgeLattice(X);
 
-Here *virtual* refers to the fact that the computed lattice may in principle differ from the correct Hodge rank. This will happen if the precision of the period matrix is too low. 
+Here *virtual* refers to the fact that the computed lattice may in principle differ from the correct Hodge lattice. This will happen if the precision of the period matrix is too low. 
 
 The main attributes of the (virtual) Hodge lattice of `X` can be accessed as follows:
 
@@ -121,7 +121,7 @@ Auxiliary data are written in to the directory `incinerator`, where it is read b
 
 The integrator needs a path in the complex plane for every one of the systems it integrates. By default it will try the straight path 0 to 1, it works most of the time. However, if there are singularities along the way the computations might not terminate. In this case we recommend setting the option `pathfinder:=1`:
 
-    Magma> PeriodHomotopy(f: pathfinder1:=true);
+    Magma> PeriodHomotopy(f: pathfinder:=1);
 
 ### Straight deformation
 
@@ -140,3 +140,9 @@ If you have a sequence of smooth, degree `d` polynomials `f0,f1,..,fr` where `f0
     Magma> PeriodHomotopy([f0,f1,f2,f3,f4,f5]);
 
 The period homotopy will be performed on this sequence with `f5` being the target hypersurface and `fi`'s the only intermediate hypersurfaces.
+
+### Obtain all periods
+
+By default we compute as few periods on the target surface as would be needed to construct the entire Hodge decomposition on cohomology. If you wish to compute the entire period matrix use the following command:
+
+    Magma> PeriodHomotopy(f : bound_pole_order:=false);
