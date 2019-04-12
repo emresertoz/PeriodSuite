@@ -1,4 +1,4 @@
-# period-suite
+# PeriodSuite
 
 Software to compute periods of hypersurfaces, with additional functions to make use of computed periods (e.g. for Picard/Hodge group computation).
 
@@ -15,13 +15,13 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
 1) Clone this repository to a directory.
 
     ```
-    git clone https://github.com/period-suite/period-suite.git /path/to/period-suite
+    git clone https://github.com/emresertoz/PeriodSuite.git /path/to/PeriodSuite
     ```
 
 2) Change the current directory to the cloned repository and type `./make`.
 
     ```
-    cd /path/to/period-suite && ./make
+    cd /path/to/PeriodSuite && ./make
     ```
 
 3) Install `ore_algebra--analytic` for the integration step.
@@ -30,7 +30,7 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
     sage -pip install --user git+https://github.com/mkauers/ore_algebra.git@analytic
     ```
 
-The installation is now complete. To use period-suite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
+The installation is now complete. To use PeriodSuite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
 
     Magma> Attach("suite.mag");
     Magma> X:=test();
