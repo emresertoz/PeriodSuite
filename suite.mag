@@ -116,7 +116,6 @@ intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 
 end intrinsic;
 
-
 intrinsic PicardFuchs(forms::SeqEnum,f0::RngMPolElt,f1::RngMPolElt : max_order:=0, family_number:=0) -> SeqEnum
 {Computes the Picard Fuchs equation for each form in forms over the family (1-t)*f0+t*f1.}
 
@@ -127,6 +126,16 @@ intrinsic PicardFuchs(forms::SeqEnum,f0::RngMPolElt,f1::RngMPolElt : max_order:=
   K<t>:=FunctionField(Q);
   R<[x]>:=PolynomialRing(K,numVars);
   f:=(1-t)*(R!f0) + t*(R!f1);
+
+  return PicardFuchs([R!form : form in forms],f : max_order:=max_order,family_number:=family_number);
+end intrinsic;
+
+intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number:=0) ->SeqEnum
+{Here f is assumed to be a polynomial with coefficients in a function field. Computes the Picard Fuchs equation for each form in the family corresponding to f.}
+
+  R:=Parent(f);
+  K:=CoefficientRing(R);
+  numVars:=Ngens(R);
 
   df := [Derivative(f,i):i in [1..numVars]];
   J := IdealWithFixedBasis(df);
