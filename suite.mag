@@ -137,6 +137,8 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   K:=CoefficientRing(R);
   numVars:=Ngens(R);
 
+  forms:=[R!form : form in forms];
+
   df := [Derivative(f,i):i in [1..numVars]];
   J := IdealWithFixedBasis(df);
 
