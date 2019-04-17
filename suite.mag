@@ -1851,3 +1851,70 @@ intrinsic PicardLefschetz(X::Any) -> Any
   X`monodromy:=ZB;
   return X;
 end intrinsic;
+
+
+intrinsic GetWeightFiltration(X::Any) -> Any, Any
+{Computes the weight filtration induced by the monodromy around the singular fiber.}
+  N,k:=LogarithmOfMonodromy(X`monodromy);
+  return WeightFiltration(N,k);
+end intrinsic;
+
+// This could be made purely combinatorial, but anyway...
+intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
+{A power of T is unipotent hence its logarithm is well defined and a nilpotent operator. This returns "log(T)" and its order.}
+  minpol:=MinimalPolynomial(T);
+  facts:=Factorization(minpol);
+  orders:=[];
+  multiplicities:=[];
+  for fact in facts do
+    _,o:=IsCyclotomicPolynomial(fact[1]); 
+    Append(~orders,o);
+    Append(~multiplicities,fact[2]);
+  end for;
+  s:=LCM(orders);
+  U:=Parent(minpol);
+  k:=0;
+  repeat
+    k +:=1;
+    pol:=(U.1^s-1)^k;
+  until pol/minpol in U;
+  return 1/k*&+[(-1)^(m+1)/m*(T^s-1)^m : m in [1..(k-1)]],k;
+end intrinsic;
+
+// WARNING: N acts on the right
+intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false) -> AlgMatElt,SeqEnum
+{
+  Computes the weight filtration induced by the nilpotent operator N.
+}
+  if transpose then N:=Transpose(N); end if;
+  N:=ChangeRing(N,Rationals());
+  assert Ncols(N) eq Nrows(N);
+  n:=Ncols(N);
+  V:=VectorSpace(Rationals(),n);
+  k:=orderOfN-1;
+  assert N^(k+1) eq 0;
+  // indeces will be shifted by -2
+  // filtration[i] = W(i-2)
+  filtration:=[]; 
+  filtration[2*k+2]:=V; // 2k
+  filtration[1]:=sub<V|0>; //-1
+  function W(i)
+    j:=i+2;
+    if IsDefined(filtration,j) then return filtration[j]; end if;
+    if i ge 2*k then return V; end if;
+    if i le 0 then return sub<V|0>; end if;
+    error "undefined";
+  end function;
+  for j in [0..k] do // W_{2k-j} = W_{k+(k-j)}
+    i:=k-j; K1:=Kernel(N^(i+1)); K2:=W(k+i+2)*N;
+    U:=K1+K2;
+    filtration[k+i+2]:=U;
+    filtration[k-i+2]:=U*N^i;
+  end for;
+  dims:=[Dimension(K) : K in filtration];
+  B:=[];
+  for V in filtration do
+    B:=ExtendBasis(B,V);
+  end for;
+  return Matrix(B), dims;
+end intrinsic;
