@@ -701,6 +701,11 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
   CC<I>:=ComplexField(Precision(v[1,1]));
 
   precision:=precision-5;
+
+  if offset gt 0.2*precision then
+    offset:=Round(0.2*precision);
+  end if;
+
   offsetPrecision:=offset;
   innerProduct:=IdentityMatrix(Integers(),NumberOfColumns(v));
   //innerProduct:=intmat;
@@ -1810,7 +1815,7 @@ intrinsic multiply(A::Any,B::Any) -> Any
   error "Entries of neither matrix can be coerced into the ring of the entries of the other matrix.";
 end intrinsic;
 
-intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt) -> Any,Any,Any
+intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt : offset:=20) -> Any,Any,Any
 {
   Given two complex floating point matrices M and N of the same size (with "precision" number of digits reliable), find small invertible integral matrices B1,B2 such that MB1=NB2. We return B1,B2,B2*B1inv.
 }
@@ -1819,12 +1824,12 @@ intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt) -> Any,Any,Any
   catch e
     M:=Parent(N)!M;
   end try;
-  _,rels:=LatticeOfRelations(HorizontalJoin(M,N),precision);
+  _,rels:=LatticeOfRelations(HorizontalJoin(M,N),precision : offset:=offset);
   try 
-    ncol:=Ncols(M); nrow:=Nrows(M); // assumed to be the same with N
+    ncol:=Ncols(M); // assumed to be the same with N
     rels:=Matrix(rels);
-    B1:=Transpose(ExtractBlock(rels,1,1,ncol,nrow));
-    B2:=-Transpose(ExtractBlock(rels,1,1+ncol,ncol,nrow));
+    B1:=Transpose(ExtractBlock(rels,1,1,ncol,ncol));
+    B2:=-Transpose(ExtractBlock(rels,1,1+ncol,ncol,ncol));
     //assert (Determinant(B1) ne 0) and (Determinant(B2) ne 0);
     F:=CoefficientRing(Parent(M));
     b1:=ChangeRing(B1,F);
@@ -1847,7 +1852,7 @@ end intrinsic;
 
 intrinsic PicardLefschetz(X::Any) -> Any
 {
-  Assuming X was a PeriodBundle computed with singular target, this function will compute the the monodromy operator around the target in the final family, and attach it to X.
+  Assuming X was a PeriodBundle computed with singular target, this function will compute the the monodromy operator around the target in the final family, attach it to X and return X;
 }
   _,_,ZB:=Monodromy(X`loopEnds,X`loopBegins,X`precision);
   X`monodromy:=ZB;
@@ -1873,14 +1878,14 @@ intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
     Append(~orders,o);
     Append(~multiplicities,fact[2]);
   end for;
-  s:=LCM(orders);
+  lcm:=LCM(orders);
   U:=Parent(minpol);
-  k:=0;
+  unipotency:=0;
   repeat
-    k +:=1;
-    pol:=(U.1^s-1)^k;
+    unipotency +:=1;
+    pol:=(U.1^lcm-1)^unipotency;
   until pol/minpol in U;
-  return 1/k*&+[(-1)^(m+1)/m*(T^s-1)^m : m in [1..(k-1)]],k;
+  return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency;
 end intrinsic;
 
 // WARNING: N acts on the right

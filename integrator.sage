@@ -131,7 +131,12 @@ compatible_tms.reverse()
 
     
 if len(loops) == 0:
-    output_to_file(prod(compatible_tms),"periods")
+    if reduce:
+        fpm=compute_periods_of_fermat()
+        pers=prod(compatible_tms)*fpm
+    else:
+        pers=prod(compatible_tms)
+    output_to_file(pers,"periods")
 else:
     loop_keys=loops.keys()
     loop_keys.sort()
