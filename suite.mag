@@ -1174,6 +1174,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
   pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
 
+  allODEs:=[];
   tstart:=Realtime();
   for i in [1..(#path-1)] do
     print "\n\n************************************\nWe are at family number",i,"out of",#path-1,"\n************************************\n";
@@ -1185,6 +1186,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
       f1_is_smooth:=target_is_smooth;
     end if;
       ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision, f1_is_smooth:=f1_is_smooth);
+      Append(~allODEs,ivps`ODEs);
 
       WriteIVPsToFile(ivps : number:=i, max_number:=#path-1);
     // to parallelize one could start integration at this point, or even sooner for each IVP
@@ -1202,7 +1204,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 
   // define a period bundle
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
-  //,odes:=allODEs,
+  odes:=allODEs,
   deformation:=path, cohomBasis:=ivps`movingBasis>;
 
   if target_is_smooth then
