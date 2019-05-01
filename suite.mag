@@ -1885,7 +1885,7 @@ intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
     unipotency +:=1;
     pol:=(U.1^lcm-1)^unipotency;
   until pol/minpol in U;
-  return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency;
+  return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency,lcm;
 end intrinsic;
 
 // WARNING: N acts on the right
