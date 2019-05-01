@@ -132,8 +132,8 @@ compatible_tms.reverse()
     
 if len(loops) == 0:
     if reduce:
-        fpm=compute_periods_of_fermat()
-        pers=prod(compatible_tms)*fpm
+        periods_of_fermat=compute_periods_of_fermat()
+        pers=prod(compatible_tms)*periods_of_fermat
     else:
         pers=prod(compatible_tms)
     output_to_file(pers,"periods")
@@ -149,11 +149,13 @@ else:
     # reduce is in the meta file. if true then initial conditions have been reduced
     # to the periods of the Fermat hypersurface
     if reduce:
-        fpm=compute_periods_of_fermat()
-        intermediate=prod(compatible_tms[1:])*fpm
+        periods_of_fermat=compute_periods_of_fermat()
+        penultimate_period_matrix=prod(compatible_tms[1:])*periods_of_fermat
     else:
-        intermediate=prod(compatible_tms[1:])
-    loop_begin=compatible_tms[0]*intermediate
-    loop_end=loop_tm*intermediate
+        penultimate_period_matrix=prod(compatible_tms[1:])
+    # penultimate.. is the period matrix for the starting hypersurface
+    # for the final family of hypersurfaces
+    loop_begin=compatible_tms[0]*penultimate_period_matrix
+    loop_end=loop_tm*penultimate_period_matrix
     output_to_file(loop_begin,"periods1")
     output_to_file(loop_end,"periods2")
