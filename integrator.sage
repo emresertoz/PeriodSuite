@@ -22,23 +22,28 @@ def integrate_ode(ode_label):
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM=tm.row(0)*M
-    return [[x.mid() for x in TM],[x.diameter() for x in TM],False,label]
+    return [convert(TM),False,label]
 
 def integrate_ode_with_loop(ode_label):
     load(ode_label)
     path1=path[0:loop_position]
-    path2=path[loop_position-1:]
+    path2=path[loop_position-1:-1]
+    path3=[path[loop_position],path[len(path)-1]]
     tm1=ode.numerical_transition_matrix(path1, 10^(-precision), assume_analytic=true)
     print "\tODE", label, "is completed until loop. Max error: ", max(tm1.apply_map(lambda x : x.diameter()).list())
     tm2=ode.numerical_transition_matrix(path2, 10^(-precision), assume_analytic=true)
     print "\tODE", label, "is completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
+    tm3=ode.numerical_transition_matrix(path3, 10^(-precision), assume_analytic=true)
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm1.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM1=tm1.row(0)*M
     TM2=(tm2.row(0)*tm1)*M
-    return [[[x.mid() for x in TM1],[x.diameter() for x in TM1]],[[x.mid() for x in TM2],[x.diameter() for x in TM2]],True,label]
+    TM3=tm3*tm1*M 
+    return [convert(TM1),convert(TM2),convert(TM3),ode,True,label]
     
+def convert(cbf_matrix):
+    return [cbf_matrix.apply_map(lambda x : x.mid()),cbf_matrix.apply_map(lambda x : x.diameter())]
 
 def convert_to_matrix_with_error(matrix,error):
     new_matrix=MatrixSpace(field,matrix.nrows(),matrix.ncols())(matrix)
@@ -46,6 +51,14 @@ def convert_to_matrix_with_error(matrix,error):
         for j in [1..matrix.ncols()]:
             new_matrix[i-1,j-1]=new_matrix[i-1,j-1].add_error(error[i-1,j-1]) 
     return new_matrix
+
+def construct_matrix(keys, dictionary):
+    # given an ordered list of keys, get the corresponding rows in dictionary 
+    # and form the mxn matrix
+    data = [dictionary[key] for key in keys]
+    mat=Matrix([dat[0] for dat in data])
+    err=Matrix([dat[1] for dat in data])
+    return convert_to_matrix_with_error(mat,err)
 
 def compute_periods_of_fermat():
     print "Computing periods of Fermat"
@@ -81,11 +94,13 @@ def output_to_file(periods,filename):
 
 
 
-
 ## Transition matrices but without intermediate base changes
 tms={}
 ## the transition matrices around loops, if any
 loops={}
+## in case of loop, the final transition matrix and odes
+limit_tm={}
+final_odes={}
 
 t0=time.time()
 ivps=[]
@@ -95,15 +110,18 @@ for file in os.listdir(ivpdir):
 ivps.sort()
 ## most time consuming part
 for solution in integrate_ode(ivps):
-    has_loop=solution[-1][2]
+    has_loop=solution[-1][-2]
     label=solution[-1][-1]
     if has_loop:
-        # output has different format
         tms[label]=solution[-1][0]
         loops[label]=solution[-1][1]
+        limit_tm[label]=solution[-1][2]
+        final_odes[label]=solution[-1][3]
     else:
-        tms[label]=solution[-1][0:2]
+        tms[label]=solution[-1][0]
 print "Integration completed in",time.time()-t0,"seconds."
+loop_keys=loops.keys()
+loop_keys.sort()
 
 ## Transition matrices made compatible with base changes
 base_change_files=[]
@@ -111,6 +129,7 @@ for file in os.listdir(ivpdir):
     if file.startswith("BaseChange-") and file.endswith(".sage"):
         base_change_files.append(os.path.join(ivpdir,file))
 base_change_files.sort()
+
 
 t0=time.time()
 keys=tms.keys()
@@ -120,10 +139,8 @@ compatible_tms=[1..steps]
 print "rearranging the matrices"
 for i in [1..steps]:
     nrows=max([k[1] for k in keys if k[0] == i])
-    ncols=len(tms[(i,1)][0])
-    tm=Matrix([tms[(i,j)][0] for j in [1..nrows]])
-    err=Matrix([tms[(i,j)][1] for j in [1..nrows]])
-    tm_with_error=convert_to_matrix_with_error(tm,err)
+    #ncols=len(tms[(i,1)][0])
+    tm_with_error=construct_matrix([(i,j) for j in [1..nrows]],tms)
     load(base_change_files[i-1])
     compatible_tms[i-1]=change_coordinates*tm_with_error
 compatible_tms.reverse()
@@ -138,11 +155,7 @@ if len(loops) == 0:
         pers=prod(compatible_tms)
     output_to_file(pers,"periods")
 else:
-    loop_keys=loops.keys()
-    loop_keys.sort()
-    tm=Matrix([loops[key][0] for key in loop_keys])
-    err=Matrix([loops[key][1] for key in loop_keys])
-    tm_with_error=convert_to_matrix_with_error(tm,err)
+    tm_with_error=construct_matrix(loop_keys,loops)
     index=loop_keys[0][0]
     load(base_change_files[index-1])
     loop_tm=change_coordinates*tm_with_error

@@ -1376,7 +1376,8 @@ Computes a sequence of rectilinear paths in the complex plane avoiding any singu
   end if;
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
   integrationPath[1]:=Sprint(0);
-  if f1_is_smooth then integrationPath[#integrationPath]:=Sprint(1); end if;
+  //if f1_is_smooth then integrationPath[#integrationPath]:=Sprint(1); end if;
+  integrationPath[#integrationPath]:=Sprint(1);
   return integrationPath,avoidPoints,loop_position;
 
 end intrinsic;
@@ -1799,9 +1800,10 @@ intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
   // in future, this should be combined with path finder
   path_before_loop_head:=[V!0];
+  path_end:=[V![1,0]];
 
   // third entry records the position of the loop head
-  return path_before_loop_head cat loop_head, sings, #path_before_loop_head+1;
+  return path_before_loop_head cat loop_head cat path_end, sings, #path_before_loop_head+1;
 end intrinsic;
 
 
@@ -1870,7 +1872,7 @@ end intrinsic;
 
 // This could be made purely combinatorial, but anyway...
 intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
-{A power of T is unipotent hence its logarithm is well defined and a nilpotent operator. This returns "log(T)" and its order.}
+{A power m of T is unipotent hence log(T) is a well defined nilpotent operator N. This function returns the triple N,nilpotency(N),m}
   minpol:=MinimalPolynomial(T);
   facts:=Factorization(minpol);
   orders:=[];
