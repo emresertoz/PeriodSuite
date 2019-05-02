@@ -100,6 +100,7 @@ tms={}
 loops={}
 ## in case of loop, the final transition matrix and odes
 limit_tm={}
+limit_periods={}
 final_odes={}
 
 t0=time.time()
@@ -144,31 +145,35 @@ for i in [1..steps]:
     load(base_change_files[i-1])
     compatible_tms[i-1]=change_coordinates*tm_with_error
 compatible_tms.reverse()
+for key in loop_keys:
+    [mat,err]=limit_tm[key]
+    limit_tm[key]=convert_to_matrix_with_error(mat,err)
 
-
-    
-if len(loops) == 0:
-    if reduce:
-        periods_of_fermat=compute_periods_of_fermat()
-        pers=prod(compatible_tms)*periods_of_fermat
-    else:
-        pers=prod(compatible_tms)
-    output_to_file(pers,"periods")
+# reduce is in the meta file. if true then initial conditions have been reduced
+# to the periods of the Fermat hypersurface
+if reduce:
+    periods_of_fermat=compute_periods_of_fermat()
 else:
+    periods_of_fermat=1 #identity matrix
+
+if len(loop_keys) != 0:
+# penultimate.. is the period matrix for the penultimate hypersurface
+    penultimate_period_matrix=prod(compatible_tms[1:])*periods_of_fermat
+    for key in loop_keys:
+        limit_periods[key]=limit_tm[key]*penultimate_period_matrix
     tm_with_error=construct_matrix(loop_keys,loops)
     index=loop_keys[0][0]
     load(base_change_files[index-1])
     loop_tm=change_coordinates*tm_with_error
-    # reduce is in the meta file. if true then initial conditions have been reduced
-    # to the periods of the Fermat hypersurface
-    if reduce:
-        periods_of_fermat=compute_periods_of_fermat()
-        penultimate_period_matrix=prod(compatible_tms[1:])*periods_of_fermat
-    else:
-        penultimate_period_matrix=prod(compatible_tms[1:])
-    # penultimate.. is the period matrix for the starting hypersurface
-    # for the final family of hypersurfaces
     loop_begin=compatible_tms[0]*penultimate_period_matrix
     loop_end=loop_tm*penultimate_period_matrix
+else:
+    pers=prod(compatible_tms)*periods_of_fermat
+    
+
+# write to file
+if len(loops) != 0:
     output_to_file(loop_begin,"periods1")
     output_to_file(loop_end,"periods2")
+else:
+    output_to_file(pers,"periods")
