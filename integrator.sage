@@ -28,18 +28,23 @@ def integrate_ode_with_loop(ode_label):
     load(ode_label)
     path1=path[0:loop_position]
     path2=path[loop_position-1:-1]
-    path3=[path[loop_position],path[len(path)-1]]
+## not super efficient!
+    #path3=[path[loop_position],path[len(path)-1]]
+    path3=[path[0],path[-1]]
     tm1=ode.numerical_transition_matrix(path1, 10^(-precision), assume_analytic=true)
-    print "\tODE", label, "is completed until loop. Max error: ", max(tm1.apply_map(lambda x : x.diameter()).list())
+    #print "\tODE", label, "is completed until loop. Max error: ", max(tm1.apply_map(lambda x : x.diameter()).list())
     tm2=ode.numerical_transition_matrix(path2, 10^(-precision), assume_analytic=true)
-    print "\tODE", label, "is completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
+    #print "\tODE", label, "loop completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
     tm3=ode.numerical_transition_matrix(path3, 10^(-precision), assume_analytic=true)
+    max_err=max([max(tm.apply_map(lambda x : x.diameter()).list()) for tm in [tm1,tm2,tm3]])
+    print "\tODE", label, "loop and limit completed. Max error: ", max_err
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm1.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM1=tm1.row(0)*M
     TM2=(tm2.row(0)*tm1)*M
-    TM3=tm3*tm1*M 
+    #TM3=tm3*tm1*M 
+    TM3=tm3*M 
     return [convert(TM1),convert(TM2),convert(TM3),ode,True,label]
     
 def convert(cbf_matrix):
@@ -148,9 +153,10 @@ compatible_tms.reverse()
 for key in loop_keys:
     [mat,err]=limit_tm[key]
     limit_tm[key]=convert_to_matrix_with_error(mat,err)
+# in case of loop, the last batch of transition matrices gets us to a
+# smooth hypersurface close to the target hypersurface
 
-# reduce is in the meta file. if true then initial conditions have been reduced
-# to the periods of the Fermat hypersurface
+# reduce is in the meta file. if true initial conditions are in terms of periods of the Fermat hypersurface
 if reduce:
     periods_of_fermat=compute_periods_of_fermat()
 else:
@@ -161,12 +167,9 @@ if len(loop_keys) != 0:
     penultimate_period_matrix=prod(compatible_tms[1:])*periods_of_fermat
     for key in loop_keys:
         limit_periods[key]=limit_tm[key]*penultimate_period_matrix
-    tm_with_error=construct_matrix(loop_keys,loops)
-    index=loop_keys[0][0]
-    load(base_change_files[index-1])
-    loop_tm=change_coordinates*tm_with_error
-    loop_begin=compatible_tms[0]*penultimate_period_matrix
-    loop_end=loop_tm*penultimate_period_matrix
+    loop_tm=construct_matrix(loop_keys,loops)
+    loop_begin=compatible_tms[0]*penultimate_period_matrix # period matrix of a smooth hypersurface close to target
+    loop_end=loop_tm*penultimate_period_matrix # period matrix for the same hypersurface, but uses a different homology basis due to monodromy
 else:
     pers=prod(compatible_tms)*periods_of_fermat
     
