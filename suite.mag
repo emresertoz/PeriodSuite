@@ -1,4 +1,4 @@
-pathToSuite:="/path/to/suite";
+pathToSuite:="/Users/sertoez/git-projects/suite/";
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -116,7 +116,6 @@ intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 
 end intrinsic;
 
-
 intrinsic PicardFuchs(forms::SeqEnum,f0::RngMPolElt,f1::RngMPolElt : max_order:=0, family_number:=0) -> SeqEnum
 {Computes the Picard Fuchs equation for each form in forms over the family (1-t)*f0+t*f1.}
 
@@ -127,6 +126,18 @@ intrinsic PicardFuchs(forms::SeqEnum,f0::RngMPolElt,f1::RngMPolElt : max_order:=
   K<t>:=FunctionField(Q);
   R<[x]>:=PolynomialRing(K,numVars);
   f:=(1-t)*(R!f0) + t*(R!f1);
+
+  return PicardFuchs([R!form : form in forms],f : max_order:=max_order,family_number:=family_number);
+end intrinsic;
+
+intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number:=0) ->SeqEnum
+{Here f is assumed to be a polynomial with coefficients in a function field. Computes the Picard Fuchs equation for each form in the family corresponding to f.}
+
+  R:=Parent(f);
+  K:=CoefficientRing(R);
+  numVars:=Ngens(R);
+
+  forms:=[R!form : form in forms];
 
   df := [Derivative(f,i):i in [1..numVars]];
   J := IdealWithFixedBasis(df);
@@ -255,8 +266,10 @@ end intrinsic;
 // pole_order_bound if non-zero constructs a cohomology basis which, using Griffiths residues, has pole order at most "pole_order_bound"
 intrinsic CompatibleCohomologyBasis(f0::RngMPolElt,f1::RngMPolElt : pole_order_bound:=0) -> SeqEnum
 {
-Find a basis for cohomology compatible for both f0 and f1
+Find a basis for cohomology compatible for both f0 and f1. If f1 is singular, returns a basis for f0.
 }
+  if not isSmooth(f1) then return ComputeCohomologyBasis(f0); end if;
+
   d:=Degree(f0);
   P:=Parent(f0);
   Q:=CoefficientRing(P);
@@ -569,12 +582,12 @@ intrinsic Analytics(ODEs::[RngUPolElt]) -> SeqEnum
 end intrinsic;
 
 // initial value problems
-IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid>;
+IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
 
 // construct the initial value problems associated to a straight line homotopy between two hypersurfaces Z(f0) and Z(f1)
 // alarm and max_order if not 0 may kill the Magma session, they must be used within disposable Magma sessions
 // if pole_order_bound is non-zero, we will only use the cohomology entries whose pole order (as Griffiths residues) is bounded by pole_order_bound
-intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0, pole_order_bound:=0, family_number:=0, pathfinder:=0, integrationPath:=[], reduce_initials:=true, precision:=200) -> Rec
+intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0, pole_order_bound:=0, family_number:=0, pathfinder:=0, integrationPath:=[], reduce_initials:=true, precision:=200, f1_is_smooth:=isSmooth(f1)) -> Rec
 {
   Computes the Picard Fuchs equations for each of a convenient base of forms over the family (1-t)*f0+t*f1. The initial conditions are expressed in the grevlex cohomology basis of f0. Also returns the time it took to compute the ODEs and their order, degree pairs.
 }
@@ -601,7 +614,7 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
     initialConditions:=CoordinatesInCohomology(f0,A0,L);
   end if;
 
-  if pole_order_bound eq 0 then
+  if (pole_order_bound eq 0) and f1_is_smooth then
     // now compute grevlex basis A on f1 and compute the change of basis matrix from B to A
     A1:=ComputeCohomologyBasis(f1 : order:="grevlex"); 
     // the following matrix computes the matrix whose rows store the coordinates of entries in A1 in terms of the basis B 
@@ -616,10 +629,10 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
   avoid:=[];
   if #integrationPath eq 0 then
     // we will use the pathfinder algorithm specified by the integer pathfinder
-    integrationPath,avoid:=SetupIntegrationPath(f0,f1,pathfinder);
+    integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder : f1_is_smooth:=f1_is_smooth);
   end if;
 
-  ivps:=rec<IVPs | ODEs:=ODEs, movingBasis:=B, inits:=initialConditions, changeBasis:=M, t:=t1-t0, analytics:=Analytics(ODEs)>;
+  ivps:=rec<IVPs | ODEs:=ODEs, movingBasis:=B, inits:=initialConditions, changeBasis:=M, t:=t1-t0, analytics:=Analytics(ODEs),loop_position:=loop_position>;
   ivps`integrationPath:=integrationPath;
   ivps`pointsToAvoid:=avoid;
 
@@ -685,9 +698,14 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
 }
 
   v:=periodMatrix;
-  CC<I>:=Parent(v[1,1]);
+  CC<I>:=ComplexField(Precision(v[1,1]));
 
   precision:=precision-5;
+
+  if offset gt 0.2*precision then
+    offset:=Round(0.2*precision);
+  end if;
+
   offsetPrecision:=offset;
   innerProduct:=IdentityMatrix(Integers(),NumberOfColumns(v));
   //innerProduct:=intmat;
@@ -734,7 +752,6 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
   realError:=Matrix(realError);
   imagError:=Matrix(imagError);
 
-
   // decide which relations are acceptable, if we trust our precision 100%!
   goodRelations:=[];
   for i in [1..Nrows(B)] do
@@ -753,7 +770,7 @@ intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Del
   firstRowLength:=Maximum([#Sprint(errorField!Sqrt(Norm(B[j]))) : j in [1..Nrows(B)]]);
 
   j:=1;
-  num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
+  //num:=&*[" " : i in [1..(zeroRowLength-1)]]*"1";
   //print num,"||", "---hyperplane section---";
 while (j le Nrows(B)) do
     num:=Sprint(j);
@@ -1081,6 +1098,7 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0)
     //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision));
     WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath));
     WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")");
+    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position));
   end for;
 
   // not required
@@ -1107,7 +1125,10 @@ end intrinsic;
 // hodgeLattice: (virtual) Hodge lattice, computed from the period matrix and the linear class
 // lat: shorthand for X`hodgeLattice`lattice
 // pol: shorthand for X`hodgeLattice`polarization (this is different from polarization above)
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,phamBasis, cohomBasis,primitiveIntersectionMatrix,intersectionMatrix,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
+// loopBegins,loopEnds: the periods of a hypersurface near the singular target hypersurface, before and after a looping around the target
+// primitiveToComplete: transition matrix for converting primitive periods to complete periods
+// monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
 
 intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
@@ -1136,12 +1157,13 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])));
   WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials));
   
-  // either the right number of integrationPaths are provided, or none at all
+  // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
   assert #integrationPaths eq #path-1; 
 
 
   target:=path[#path]; 
+  target_is_smooth:=isSmooth(target);
   P:=Parent(target);
   n:=Ngens(P)-2;
   d:=Degree(target); 
@@ -1152,15 +1174,20 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
   pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
 
+  allODEs:=[];
   tstart:=Realtime();
   for i in [1..(#path-1)] do
     print "\n\n************************************\nWe are at family number",i,"out of",#path-1,"\n************************************\n";
     if i ne (#path-1) then
       pob:=0; // pole order bound
+      f1_is_smooth:=true;
     else
       pob:=pole_order_bound; // in the last step we need only compute some of the periods
+      f1_is_smooth:=target_is_smooth;
     end if;
-      ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision);
+      ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision, f1_is_smooth:=f1_is_smooth);
+      Append(~allODEs,ivps`ODEs);
+
       WriteIVPsToFile(ivps : number:=i, max_number:=#path-1);
     // to parallelize one could start integration at this point, or even sooner for each IVP
   end for;
@@ -1177,26 +1204,19 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 
   // define a period bundle
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
-  //,odes:=allODEs,
+  odes:=allODEs,
   deformation:=path, cohomBasis:=ivps`movingBasis>;
 
-  file:=Open(PeriodSuiteTempDir()*"periods","r");
-  s:=Gets(file);
-  bundle`precision:=eval s;
-  s:=Gets(file);
-  CC<I>:=ComplexField(eval s);
-  old_prec:=Precision(GetDefaultRealField());
-  SetDefaultRealFieldPrecision(eval s);
-  primitive:=[];
-  s:=Gets(file);
-  while not IsEof(s) do
-    Append(~primitive,eval(s));
-    s:=Gets(file);
-  end while;
-  bundle`primitivePeriods:=Matrix(primitive);
-  SetDefaultRealFieldPrecision(old_prec);
-
-  bundle:=completeHomology(bundle);
+  if target_is_smooth then
+    bundle`primitivePeriods,bundle`precision:=loadPeriods("periods");
+    bundle:=PrimitiveToComplete(bundle);
+    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+  else
+    bundle`loopBegins:=loadPeriods("periods1");
+    // precision is worst at the end
+    bundle`loopEnds,bundle`precision:=loadPeriods("periods2");
+    bundle:=PrimitiveToComplete(bundle);
+  end if;
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
@@ -1212,6 +1232,27 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   return bundle;
+end intrinsic;
+
+intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
+{
+  Parses the output of integration.
+}
+  file:=Open(PeriodSuiteTempDir()*filename,"r");
+  s:=Gets(file);
+  precision:=eval s;
+  s:=Gets(file);
+  CC<I>:=ComplexField(eval s);
+  old_prec:=Precision(GetDefaultRealField());
+  SetDefaultRealFieldPrecision(eval s);
+  primitive:=[];
+  s:=Gets(file);
+  while not IsEof(s) do
+    Append(~primitive,eval(s));
+    s:=Gets(file);
+  end while;
+  SetDefaultRealFieldPrecision(old_prec);
+  return Matrix(primitive), precision;
 end intrinsic;
 
 
@@ -1297,6 +1338,10 @@ intrinsic BreakingPathAuxillary(f::RngMPolElt,g::RngMPolElt : randomize:=false) 
      end for;
     end for;
   end for;
+
+  // g is not smooth
+  return g;
+
 end intrinsic;
 
 
@@ -1311,21 +1356,29 @@ intrinsic SetupFamily(f0::RngMPolElt,f1::RngMPolElt) -> RngMPolElt
   return (1-t)*(R!f0) + t*(R!f1);
 end intrinsic;
 
-intrinsic SetupIntegrationPath(f0::RngMPolElt,f1::RngMPolElt, pathfinder::RngIntElt) -> Any,Any
+intrinsic SetupIntegrationPath(f0::RngMPolElt,f1::RngMPolElt, pathfinder::RngIntElt : f1_is_smooth:=isSmooth(f1)) -> Any,Any
 {
 Computes a sequence of rectilinear paths in the complex plane avoiding any singular fibers in the family of hypersurfaces (1-t)*f1+t*f0.
 }
 
-  PathFinder:=case<pathfinder| 1:PathFinder1, default:PathFinder0>;
-  path,avoid:=PathFinder(f0,f1);
   Cc:=ComplexField(10);
   AssignNames(~Cc,["I"]);
+
+  if f1_is_smooth then
+    PathFinder:=case<pathfinder| 1:PathFinder1, default:PathFinder0>;
+    path,avoid:=PathFinder(f0,f1);
+    avoidPoints:=planeToComplex(avoid);
+    loop_position:=-1;
+  else 
+    PathFinder:=FormLoop;
+    path,avoid,loop_position:=PathFinder(f0,f1);
+    avoidPoints:=avoid;
+  end if;
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
   integrationPath[1]:=Sprint(0);
+  //if f1_is_smooth then integrationPath[#integrationPath]:=Sprint(1); end if;
   integrationPath[#integrationPath]:=Sprint(1);
-  avoidPoints:=planeToComplex(avoid);
-
-  return integrationPath,avoidPoints;
+  return integrationPath,avoidPoints,loop_position;
 
 end intrinsic;
 
@@ -1592,6 +1645,58 @@ intrinsic massIntegrate(dervs::SeqEnum, deg::RngIntElt, type::SeqEnum : precisio
   return result,phamBasis;
 end intrinsic;
 
+intrinsic PrimitiveToComplete(X::Rec) -> Any
+{
+  Completes the primitive homology of X. Outputs the modified X which includes the transition matrix from primitive periods to complete periods.
+}
+  d:=X`degree;
+  n:=X`dimension;
+  phamB:=X`phamBasis;
+  // if dimension is odd, primitive homology coincides with homology
+  if X`dimension mod 2 eq 1 then
+    X`primitiveToComplete:=IdentityMatrix(Rationals(),#phamB);
+    X`intersectionMatrix:=X`primitiveIntersectionMatrix;
+    return X;
+  end if;
+  IM:=ChangeRing(X`primitiveIntersectionMatrix,Rationals());
+  // Using:
+  // Degtyarev and Shimada intersection numbers
+  // Theorem 2.2, arXiv:1405.4683v3
+  // for explanations see: Lairez, Sertoz -- Numerical Hodge Rank
+  // the helper tau function
+  function tau(i)
+    if i mod (2*d) eq 1 then return 1;
+    elif i mod (2*d) eq 2*d-1 then return -1;
+    end if;
+    return 0;
+  end function;
+  // L is the class of a particular linear subscheme of half-dimension in Fermat.
+  function intersectLwith(beta)
+    return tau(2*beta[n+1]-2*beta[n+2]-1)*&*[tau(2*beta[2*i-1] - 2*beta[2*i] + 1) : i in [1..(n/2)]];
+  end function;
+  // We will now compute the projection of L into the primitive homology.
+  intL:=Matrix([[intersectLwith(beta) : beta in phamB]]);
+  IMinv:=Determinant(IM)^(-1)*Adjoint(IM);
+  kappa:=ChangeRing(intL,Rationals())*IMinv;
+  //self intersection of kappa
+  kappaSelfIntersection:= kappa*IM*Transpose(kappa);
+  // L = 1/d hyp + kappa
+  // since hyp^2 = d
+  // L^2 = 1/d + kappa^2 
+  LSelfIntersection:=Integers()!(kappaSelfIntersection[1,1]+1/d);
+  // form the intersection matrix for homology by using L^2 and intL
+  fullIM:=VerticalJoin(X`primitiveIntersectionMatrix,intL);
+  temp:=Transpose(HorizontalJoin(intL,Matrix([[LSelfIntersection]])));
+  fullIM:=HorizontalJoin(fullIM,temp);
+  X`intersectionMatrix:=fullIM;
+  // the hyperplane class
+  // L = 1/d hyp + kappa
+  // hyp = d*L - d*kappa
+  X`polarization:= Matrix(HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]])));
+  X`primitiveToComplete:=HorizontalJoin(IdentityMatrix(Rationals(),#phamB),Transpose(kappa));
+  return X;
+end intrinsic;
+
 // hodge lattice
 // rank: rank of the Hodge lattice
 // lattice: the intersection matrix of the lattice
@@ -1600,76 +1705,6 @@ end intrinsic;
 // parameters: numerical parameters used for the computation of the hodgeLattice, such as the offset and precision
 hodgeLattice := recformat<rank,lattice,basis,polarization,degrees,parameters>;
 
-// input: a PeriodBundle record X
-// output: X, with the intersection matrix on the entire homology of X, as well as the periods extended to entire homology
-intrinsic completeHomology(X::Rec) -> Rec
-{
-  Takes a period bundle with primitive homology and completes it to the entire homology by the addition of a class representing a linear space in Fermat.
-}
-  // if dimension is odd, primitive homology coincides with homology
-  if X`dimension mod 2 eq 1 then
-    X`periods:=X`primitivePeriods;
-    X`intersectionMatrix:=X`primitiveIntersectionMatrix;
-    return X;
-  end if;
-
-  periods:=X`primitivePeriods;
-  CC<I>:=Parent(periods[1,1]);
-  d:=X`degree;
-  n:=X`dimension;
-  phamB:=X`phamBasis;
-  IM:=ChangeRing(X`primitiveIntersectionMatrix,Rationals());
-  
-  // Using:
-  // Degtyarev and Shimada intersection numbers
-  // Theorem 2.2, arXiv:1405.4683v3
-  // for explanations see: Lairez, Sertoz -- Numerical Hodge Rank
-
-  // the helper tau function
-  function tau(i)
-    if i mod (2*d) eq 1 then return 1;
-    elif i mod (2*d) eq 2*d-1 then return -1;
-    end if;
-    return 0;
-  end function;
-
-  // L is the class of a particular linear subscheme of half-dimension in Fermat.
-  function intersectLwith(beta)
-    return tau(2*beta[n+1]-2*beta[n+2]-1)*&*[tau(2*beta[2*i-1] - 2*beta[2*i] + 1) : i in [1..(n/2)]];
-  end function;
-
-  // We will now compute the projection of L into the primitive homology.
-  intL:=Matrix([[intersectLwith(beta) : beta in phamB]]);
-  IMinv:=Determinant(IM)^(-1)*Adjoint(IM);
-  kappa:=ChangeRing(intL,Rationals())*IMinv;
-
-  //self intersection of kappa
-  kappaSelfIntersection:= kappa*IM*Transpose(kappa);
-
-  // L = 1/d hyp + kappa
-  // since hyp^2 = d
-  // L^2 = 1/d + kappa^2 
-  LSelfIntersection:=Integers()!(kappaSelfIntersection[1,1]+1/d);
-
-  // periods of L (equivalently of kappa) are readily computed from its coordinates in the Pham basis
-  Lperiods:=periods*Transpose(ChangeRing(kappa,CC));
-  allPeriods:=HorizontalJoin(periods,Lperiods);
-  X`periods:=allPeriods;
-
-  // form the intersection matrix for homology by using L^2 and intL
-  fullIM:=VerticalJoin(X`primitiveIntersectionMatrix,intL);
-  temp:=Transpose(HorizontalJoin(intL,Matrix([[LSelfIntersection]])));
-  fullIM:=HorizontalJoin(fullIM,temp);
-  X`intersectionMatrix:=fullIM;
-
-  // the hyperplane class
-  // L = 1/d hyp + kappa
-  // hyp = d*L - d*kappa
-  X`polarization:= Matrix(HorizontalJoin(ChangeRing(-d*kappa,Integers()),Matrix([[d]])));
-
-  return X;
-
-end intrinsic;
 
 intrinsic HodgeLattice(X::Rec : offset:=20) -> Rec
 {
@@ -1750,3 +1785,147 @@ intrinsic CoordinatesInReducedCohomologyBasis(f::RngMPolElt,basis::[RngMPolElt],
   return [Coordinates(W,W!b) : b in rb2];
 end intrinsic;
 
+intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
+{
+  Computes a path which goes from f0 to some g near f1 and loops counterclockwise around f1 back to g. This loop contains no other singular hypersurfaces except f1, which is assumed to be singular.
+}
+  sings:=singularFibersOfPencil(f0,f1);
+  assert 1 in sings;
+  distance_to_closest_singularity:=Sort([Abs(s-1) : s in sings])[2];
+  dist:=1/2*Minimum(0.2,distance_to_closest_singularity);
+  //form a diamond around 1.
+
+  // complex plane
+  V:=VectorSpace(RealField(20),2);
+  loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
+  // in future, this should be combined with path finder
+  path_before_loop_head:=[V!0];
+  path_end:=[V![1,0]];
+
+  // third entry records the position of the loop head
+  return path_before_loop_head cat loop_head cat path_end, sings, #path_before_loop_head+1;
+end intrinsic;
+
+
+intrinsic multiply(A::Any,B::Any) -> Any
+{
+  Try computing A*B by coercing the coefficients of B into the ring of A and, if this fails, then the other way around.
+}
+  try 
+    return A*ChangeRing(B,Parent(A[1,1]));
+  catch e
+    return ChangeRing(A,Parent(B[1,1]))*B;
+  end try;
+  error "Entries of neither matrix can be coerced into the ring of the entries of the other matrix.";
+end intrinsic;
+
+intrinsic Monodromy(M::Any,N::Any, precision::RngIntElt : offset:=20) -> Any,Any,Any
+{
+  Given two complex floating point matrices M and N of the same size (with "precision" number of digits reliable), find small invertible integral matrices B1,B2 such that MB1=NB2. We return B1,B2,B2*B1inv.
+}
+  try
+    N:=Parent(M)!N;
+  catch e
+    M:=Parent(N)!M;
+  end try;
+  _,rels:=LatticeOfRelations(HorizontalJoin(M,N),precision : offset:=offset);
+  try 
+    ncol:=Ncols(M); // assumed to be the same with N
+    rels:=Matrix(rels);
+    B1:=Transpose(ExtractBlock(rels,1,1,ncol,ncol));
+    B2:=-Transpose(ExtractBlock(rels,1,1+ncol,ncol,ncol));
+    //assert (Determinant(B1) ne 0) and (Determinant(B2) ne 0);
+    F:=CoefficientRing(Parent(M));
+    b1:=ChangeRing(B1,F);
+    b2:=ChangeRing(B2,F);
+    b:=b2*Inverse(b1);
+    ZB:=Matrix([[Integers()|Round(b[i,j]) : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
+    B:=Matrix([[F|ZB[i,j] : j in [1..Ncols(b)]]: i in [1..Nrows(b)]]);
+    errorRing<I>:=ComplexField(1);
+    // WARNING: Scaling the error to exaggerate size.
+    scale:=10^precision;
+    allErrors:=Eltseq(ChangeRing(scale*(Matrix(M) - Matrix(N)*B),errorRing));
+    maximumError:=SquareRoot(Maximum([Norm(e): e in allErrors]));
+    print "If the result is reliable, error should be around 1. Anything less is an indication of a stronger match. If there is no match, expect an error of magnitude 10^"*Sprint(precision)*".";
+    print "Obtained an error of:", maximumError, "\n";
+  catch e
+    error "It seems, these matrices are not related by a monodromy.";
+  end try;
+  return B1,B2,ZB;
+end intrinsic;
+
+intrinsic PicardLefschetz(X::Any) -> Any
+{
+  Assuming X was a PeriodBundle computed with singular target, this function will compute the the monodromy operator around the target in the final family, attach it to X and return X;
+}
+  _,_,ZB:=Monodromy(X`loopEnds,X`loopBegins,X`precision);
+  X`monodromy:=ZB;
+  return X;
+end intrinsic;
+
+
+intrinsic GetWeightFiltration(X::Any) -> Any, Any
+{Computes the weight filtration induced by the monodromy around the singular fiber.}
+  N,k:=LogarithmOfMonodromy(X`monodromy);
+  return WeightFiltration(N,k);
+end intrinsic;
+
+// This could be made purely combinatorial, but anyway...
+intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
+{A power m of T is unipotent hence log(T) is a well defined nilpotent operator N. This function returns the triple N,nilpotency(N),m}
+  minpol:=MinimalPolynomial(T);
+  facts:=Factorization(minpol);
+  orders:=[];
+  multiplicities:=[];
+  for fact in facts do
+    _,o:=IsCyclotomicPolynomial(fact[1]); 
+    Append(~orders,o);
+    Append(~multiplicities,fact[2]);
+  end for;
+  lcm:=LCM(orders);
+  U:=Parent(minpol);
+  unipotency:=0;
+  repeat
+    unipotency +:=1;
+    pol:=(U.1^lcm-1)^unipotency;
+  until pol/minpol in U;
+  return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency,lcm;
+end intrinsic;
+
+// WARNING: N acts on the right
+intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false) -> AlgMatElt,SeqEnum
+{
+  Computes the weight filtration induced by the nilpotent operator N.
+}
+  if transpose then N:=Transpose(N); end if;
+  N:=ChangeRing(N,Rationals());
+  assert Ncols(N) eq Nrows(N);
+  n:=Ncols(N);
+  V:=VectorSpace(Rationals(),n);
+  k:=orderOfN-1;
+  assert N^(k+1) eq 0;
+  // indeces will be shifted by -2
+  // filtration[i] = W(i-2)
+  filtration:=[]; 
+  filtration[2*k+2]:=V; // 2k
+  filtration[1]:=sub<V|0>; //-1
+  function W(i)
+    j:=i+2;
+    if IsDefined(filtration,j) then return filtration[j]; end if;
+    if i ge 2*k then return V; end if;
+    if i le 0 then return sub<V|0>; end if;
+    error "undefined";
+  end function;
+  for j in [0..k] do // W_{2k-j} = W_{k+(k-j)}
+    i:=k-j; K1:=Kernel(N^(i+1)); K2:=W(k+i+2)*N;
+    U:=K1+K2;
+    filtration[k+i+2]:=U;
+    filtration[k-i+2]:=U*N^i;
+  end for;
+  dims:=[Dimension(K) : K in filtration];
+  B:=[];
+  for V in filtration do
+    B:=ExtendBasis(B,V);
+  end for;
+  return Matrix(B), dims;
+end intrinsic;
