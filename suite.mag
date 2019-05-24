@@ -1215,6 +1215,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
     bundle`loopBegins:=loadPeriods("periods1");
     // precision is worst at the end
     bundle`loopEnds,bundle`precision:=loadPeriods("periods2");
+    bundle`periods:=loadPeriods("limit_periods");
     bundle:=PrimitiveToComplete(bundle);
   end if;
 
