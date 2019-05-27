@@ -63,7 +63,7 @@ end intrinsic;
 // in the same nesting structure of L
 intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 {
-  Takes a nested list of polynomials L and returns the GD reduction of these polynomials on f in the same nesting structure of L. Depth is the number of layers of the nested list L. Depth=1 implies L is a polynomial.
+  Takes a nested list of polynomials L and returns the GD reduction of these polynomials on f in the same nesting structure of L. Depth is the number of layers of the nested list L, where depth=0 means L is a polynomial.
 }
 
 
@@ -542,8 +542,8 @@ intrinsic DifferentiateForm(numerator::RngMPolElt,f0::RngMPolElt,f1::RngMPolElt)
 {
  Differentiates the form numerator*Omega/((1-t)*f0 + t*f1)^l, and outputs the new numerator.
 }
-  l:=(Degree(numerator)+Ngens(Parent(f0)))/Degree(f0);
-  return -l*(f1-f0)*numerator;
+  d:=Degree(f0); nvars:=Ngens(Parent(f0));
+  return &+[ -(Degree(homnum)+nvars)/d*(f1-f0)*homnum : homnum in HomogeneousComponents(numerator)];
 end intrinsic;
 
 // works with a form of the type numerator*Omega/((1-t)*f0 + t*f1)^l
@@ -1938,3 +1938,30 @@ intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false)
   end function;
   return Matrix(B), dims, W;
 end intrinsic;
+
+
+
+// computing first order deformation of de Rahm cohomology
+intrinsic DifferentiateCohomologyClasses(f::RngMPolElt,cohom_classes::SeqEnum,tangent_directions::SeqEnum) -> SeqEnum 
+{
+  Given a list of cohomology classes (a list of polynomials) and a list of tangent directions (a list of polynomials of degree deg(f)) output the coordinates of the differentiated cohom_classes for each tangent direction (using grevlex basis of cohomology).  
+}
+  
+  // TODO: check that forms are of the right degrees, so they indeed give cohom classes
+  differentials:=[[DifferentiateForm(q,f,f+m) : q in cohom_classes] : m in tangent_directions];
+  B:=ComputeCohomologyBasis(f : order:="grevlex"); 
+  return CoordinatesInCohomology(f,B,differentials);
+
+end intrinsic;
+
+intrinsic DifferentiateCohomology(f::RngMPolElt,tangent_directions::SeqEnum) -> SeqEnum
+{
+  Given a list of tangent directions (a list of polynomials of degree deg(f)) output the coordinates of the differentiated cohom_classes for each tangent direction (using grevlex basis of cohomology).  
+}
+  B:=ComputeCohomologyBasis(f : order:="grevlex"); 
+  differentials:=[[DifferentiateForm(q,f,f+m) : q in B] : m in tangent_directions];
+  return [ Matrix(#B,#B,coords) : coords in CoordinatesInCohomology(f,B,differentials)];
+  // the i-th row of each matrix is the coordinates of the i-th basis element of the basis
+end intrinsic;
+
+

@@ -229,20 +229,20 @@ def limit_in_grassmanian(V):
 # to invert that thing
 # oh, but this means I lose the bases across various things...
 
-limitP=[]
-for key in loop_keys:
-    basis=final_odes[key].local_basis_expansions(1)
-    A=Matrix([[sum([a[0]*a[1] for a in b]) for b in basis]])
-    B=limit_periods[key]#.apply_map(lambda x : x.mid())
-    limitP.append((A*B).list())
-limitP=Matrix(limitP)
+if len(loop_keys) != 0:
+  limitP=[]
+  for key in loop_keys:
+      basis=final_odes[key].local_basis_expansions(1)
+      A=Matrix([[sum([a[0]*a[1] for a in b]) for b in basis]])
+      B=limit_periods[key]#.apply_map(lambda x : x.mid())
+      limitP.append((A*B).list())
+  limitP=Matrix(limitP)
 ## Schmid's nilpotent theorem shows us how we can cancel logarithms, but eventually
 ## this boils down to substituting log = 0
 ## TODO prove this lemma
-limitP=limitP.apply_map(lambda a : a.substitute({log(x-1):0}))
-
-dimp=1 # TEMPORARY, would be supplied by magma
-limit=matrix([limit_in_grassmanian(limitP.submatrix(0,0,dimp))])
+  limitP=limitP.apply_map(lambda a : a.substitute({log(x-1):0}))
+  dimp=1 # TEMPORARY, would be supplied by magma
+  limit=matrix([limit_in_grassmanian(limitP.submatrix(0,0,dimp))])
 
 # write to file
 if len(loops) != 0:
