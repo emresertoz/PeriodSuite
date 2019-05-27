@@ -1906,19 +1906,20 @@ intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false)
   k:=orderOfN-1;
   assert N^(k+1) eq 0;
   // indeces will be shifted by -2
-  // filtration[i] = W(i-2)
+  // filtration[i] = W_(i-2)
   filtration:=[]; 
   filtration[2*k+2]:=V; // 2k
   filtration[1]:=sub<V|0>; //-1
-  function W(i)
-    j:=i+2;
-    if IsDefined(filtration,j) then return filtration[j]; end if;
-    if i ge 2*k then return V; end if;
-    if i le 0 then return sub<V|0>; end if;
-    error "undefined";
-  end function;
   for j in [0..k] do // W_{2k-j} = W_{k+(k-j)}
-    i:=k-j; K1:=Kernel(N^(i+1)); K2:=W(k+i+2)*N;
+    i:=k-j; K1:=Kernel(N^(i+1)); 
+    //K2:=W(k+i+2)*N;
+    ii:=k+i+2; jj:=ii+2;
+    if IsDefined(filtration,jj) then K2:=filtration[jj]; 
+    elif ii ge 2*k then K2:=V; 
+    elif ii le 0 then K2:=sub<V|0>;
+    else
+      error "undefined";
+    end if;
     U:=K1+K2;
     filtration[k+i+2]:=U;
     filtration[k-i+2]:=U*N^i;
@@ -1928,5 +1929,12 @@ intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false)
   for V in filtration do
     B:=ExtendBasis(B,V);
   end for;
-  return Matrix(B), dims;
+  function W(i)
+    j:=i+2;
+    if IsDefined(filtration,j) then return filtration[j]; end if;
+    if i ge 2*k then return V; end if;
+    if i le 0 then return sub<V|0>; end if;
+    error "undefined";
+  end function;
+  return Matrix(B), dims, W;
 end intrinsic;
