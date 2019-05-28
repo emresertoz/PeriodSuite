@@ -173,10 +173,81 @@ if len(loop_keys) != 0:
 else:
     pers=prod(compatible_tms)*periods_of_fermat
     
+# computes generators for the lattice of integral row vectors annihilating the given matrix
+# the matrix has entries in a complex ball field
+# the generators are what seem "reasonable" given the precision of entries
+def left_integral_kernel(complex_ball_matrix):
+    complex_matrix=complex_ball_matrix.apply_map(lambda x : x.mid())
+    precision=-(log(max(complex_ball_matrix.apply_map(lambda x : x.diameter()).list()))/log(10)).n().floor()
+    scale=10^(precision*0.8).floor()
+    ncol=complex_matrix.ncols()
+    nrow=complex_matrix.nrows()
+    real_generators=block_matrix([[complex_matrix.apply_map(real),complex_matrix.apply_map(imag)]])
+    truncated_generators=(scale*real_generators).apply_map(lambda x : x.round())
+    lattice=block_matrix([[truncated_generators,matrix.identity(nrow)]])
+    reduced_lattice=lattice.LLL()
+    # decide which rows to accept
+    tentative_kernel=reduced_lattice.submatrix(0,2*ncol)
+    kernel=[]
+    for relation in tentative_kernel.rows():
+        if all((relation*complex_ball_matrix).apply_map(lambda x : x.contains_zero())):
+            kernel.append(relation)
+    return matrix(kernel)
+
+# return an integral matrix B such that mat1=mat2*B
+# here mat1 and mat2 are matricies with complex ball entries
+def monodromy(mat1,mat2):
+    ncol=mat1.ncols()
+    assert mat1.ncols() == mat2.ncols()
+    assert mat1.nrows() == mat2.nrows()
+    rels=left_integral_kernel(block_matrix([[mat1,mat2]]).transpose()).transpose()
+    if (rels.nrows(), rels.ncols()) != (2*ncol,ncol):
+        raise ValueError, "The two matricies have more than one relation, we can not deduce the monodromy operator"
+    else:
+        B1=rels.submatrix(0,0,ncol,ncol)
+        B2=-rels.submatrix(ncol,0,ncol,ncol)
+        return (B2*B1.inverse()).apply_map(lambda x : ZZ(x))
+    
+def logarithm_of_monodromy(T):
+    poly=T.minimal_polynomial()
+    mult=lcm([ff[0].is_cyclotomic(certificate=True) for ff in list(poly.factor())])
+    varx=poly.parent().gen()
+    unipotency=1
+    while not poly.divides((varx^mult-1)^unipotency):
+        unipotency +=1
+    logT=1/mult*sum([(-1)^(k+1)/k*(T^mult-1)^k for k in [1..(unipotency-1)]])
+    return logT, unipotency, mult
+
+def limit_in_grassmanian(V):
+    minors=V.minors(dimp)
+    leading=min([a.low_degree(x-1) for a in minors])
+    limit=[field(a.coefficient((x-1)^leading)) for a in minors]
+    if all([l.contains_zero() for l in limit]):
+        raise ValueError, "limit_in_grassmanian function needs to be careful in cancelling coefficients"
+    return limit #matrix([[a.coefficient((x-1)^leading) for a in minors]])
+# it might be better to find the index of the minor with smallest coefficient and then
+# to invert that thing
+# oh, but this means I lose the bases across various things...
+
+if len(loop_keys) != 0:
+  limitP=[]
+  for key in loop_keys:
+      basis=final_odes[key].local_basis_expansions(1)
+      A=Matrix([[sum([a[0]*a[1] for a in b]) for b in basis]])
+      B=limit_periods[key]#.apply_map(lambda x : x.mid())
+      limitP.append((A*B).list())
+  limitP=Matrix(limitP)
+## Schmid's nilpotent theorem shows us how we can cancel logarithms, but eventually
+## this boils down to substituting log = 0
+## TODO prove this lemma
+  limitP=limitP.apply_map(lambda a : a.substitute({log(x-1):0}))
+  dimp=1 # TEMPORARY, would be supplied by magma
+  limit=matrix([limit_in_grassmanian(limitP.submatrix(0,0,dimp))])
 
 # write to file
 if len(loops) != 0:
     output_to_file(loop_begin,"periods1")
     output_to_file(loop_end,"periods2")
+    output_to_file(limit,"limit_periods")
 else:
     output_to_file(pers,"periods")
