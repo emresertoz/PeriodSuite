@@ -1956,12 +1956,20 @@ end intrinsic;
 
 intrinsic DifferentiateCohomology(f::RngMPolElt,tangent_directions::SeqEnum) -> SeqEnum
 {
-  Given a list of tangent directions (a list of polynomials of degree deg(f)) output the coordinates of the differentiated cohom_classes for each tangent direction (using grevlex basis of cohomology).  
+  Given a list of tangent directions (a list of polynomials of degree deg(f)) output the coordinates of the differentiated grevlex cohomology basis for each tangent direction (using grevlex basis of cohomology).  
 }
   B:=ComputeCohomologyBasis(f : order:="grevlex"); 
   differentials:=[[DifferentiateForm(q,f,f+m) : q in B] : m in tangent_directions];
   return [ Matrix(#B,#B,coords) : coords in CoordinatesInCohomology(f,B,differentials)];
   // the i-th row of each matrix is the coordinates of the i-th basis element of the basis
+end intrinsic;
+
+intrinsic DifferentiateCohomology(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
+{
+  For the family (1-t)f0 + tf1, we compute the derivatives of a compatible cohomology basis at t=0.  
+}
+  B:=CompatibleCohomologyBasis(f0,f1);
+  return CoordinatesInCohomology(f0,B,[DifferentiateForm(q,f0,f1) : q in B]);
 end intrinsic;
 
 
