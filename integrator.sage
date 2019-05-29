@@ -222,8 +222,8 @@ def limit_in_grassmanian(V):
     minors=V.minors(dimp)
     leading=min([a.low_degree(x-1) for a in minors])
     limit=[field(a.coefficient((x-1)^leading)) for a in minors]
-    if all([l.contains_zero() for l in limit]):
-        raise ValueError, "limit_in_grassmanian function needs to be careful in cancelling coefficients"
+    #if all([l.contains_zero() for l in limit]):
+        #raise ValueError, "limit_in_grassmanian function needs to be careful in cancelling coefficients"
     return limit #matrix([[a.coefficient((x-1)^leading) for a in minors]])
 # it might be better to find the index of the minor with smallest coefficient and then
 # to invert that thing
