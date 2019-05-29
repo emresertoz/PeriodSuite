@@ -1,5 +1,5 @@
 pathToSuite="/Users/sertoez/git-projects/suite/";
-ivpdir=pathToSuite+"incinerator/";
+load(pathToSuite+"ivpdir.sage")
 ncpus=100
 
 print("Beginning integration...")

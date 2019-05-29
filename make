@@ -6,8 +6,6 @@ integrator="integrator.sage"
 
 mkdir -p ${pathToSuite}"/""incinerator";
 mkdir -p ${pathToSuite}"/""freezer";
-mkdir -p ${pathToSuite}"/""databank";
-
 
 sed -i.backup "1d" $suite
 sed -i.backup "1i\\

@@ -8,11 +8,15 @@ intrinsic PathToSuite() -> MonStgElt
 end intrinsic;
 
 
-intrinsic PeriodSuiteStorageDir() -> MonStgElt
+intrinsic PeriodSuiteStorageDir(:subfolder:="") -> MonStgElt
 {
- Returns the directory for temp files of period-suite. 
+ Returns the directory for intermediate computational results that may be reused. 
 }
-  return PathToSuite()*"freezer/";
+  if #subfolder eq 0 then
+    return PathToSuite()*"freezer/";
+  else
+    return PeriodSuiteStorageDir()*subfolder*"/";
+  end if;
 end intrinsic;
 
 intrinsic PeriodSuiteTempDir() -> MonStgElt
@@ -22,12 +26,16 @@ intrinsic PeriodSuiteTempDir() -> MonStgElt
   return PathToSuite()*"incinerator/";
 end intrinsic;
 
-intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false)
+intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false, name:="")
 {
   Writes the string to filename inside the appropriate folder within period-suite. Takes care of line breaking issues.
 }
   cols := GetColumns();
-  target:=PeriodSuiteTempDir()*filename;
+  if #name eq 0 then
+    target:=PeriodSuiteTempDir()*filename;
+  else
+    target:=PeriodSuiteStorageDir(:subfolder:=name)*filename;
+  end if;
   SetColumns(0);
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
@@ -641,7 +649,7 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
 end intrinsic;
 
 
-intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_bound:=0, family_number:=0, max_number:=0, pathfinder:=0, integrationPath:=[])  -> Any
+intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_bound:=0, family_number:=0, max_number:=0, pathfinder:=0, integrationPath:=[], name:="")  -> Any
 {
   Computes the Picard Fuchs equations for each of a convenient base of forms over the family (1-t)*f0+t*f1. The initial conditions are expressed in the grevlex cohomology basis of f0. Writes to file everything needed to start integrating these initial value problems.
 }
@@ -668,11 +676,11 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
     L:=ComputeDerivatives(B[i],f0,f1,requiredDerivatives : withFactorial:=true);
     init:=CoordinatesInReducedCohomologyBasis(f0,A0,L);
     ode_filename:="IVP-"*suffix(family_number,max_number)*"-"*suffix(i,#ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(ODEs[i]) : Overwrite:=true);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(init));
-    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision));
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath));
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(family_number)*","*Sprint(i)*")");
+    WriteInsideTempFolder(ode_filename,"ode="*Sprint(ODEs[i]) : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename,"init="*Sprint(init):name:=name);
+    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=name);
+    WriteInsideTempFolder(ode_filename,"label=("*Sprint(family_number)*","*Sprint(i)*")":name:=name);
   end for;
   
   filename:="BaseChange-"*suffix(family_number,max_number)*".sage"; 
@@ -681,10 +689,10 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
     A1:=ComputeCohomologyBasis(f1 : order:="grevlex"); 
     // the following matrix computes the matrix whose rows store the coordinates of entries in A1 in terms of the basis B 
     M:=CoordinatesInCohomology(f1,B,A1);
-    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(#B)*","*Sprint(Eltseq(M))*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(#B)*","*Sprint(Eltseq(M))*")" : Overwrite:=true,name:=name);
   else 
     // we don't have to change coordinates to a standard basis because this clause can be activated only if we are at the final hypersurface
-    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(#B)*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(#B)*")" : Overwrite:=true,name:=name);
   end if;
 
   return B;
@@ -1076,7 +1084,7 @@ intrinsic suffix(number::RngIntElt,  max_number::RngIntElt) -> MonStgElt
   return Sprint(10^digits+number)[2..(digits+1)];
 end intrinsic;
 
-intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0)
+intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
 {
   Writes the output of ConstructIVPs in a format readable by Sage.
 }
@@ -1085,27 +1093,27 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0)
   M:=E`changeBasis;
   nrows:=Nrows(M);
   if IsIdentity(M) then
-    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(nrows)*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(nrows)*")" : Overwrite:=true,name:=name);
   else
-    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(nrows)*","*Sprint(Eltseq(M))*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(nrows)*","*Sprint(Eltseq(M))*")" : Overwrite:=true,name:=name);
   end if;
-  //WriteInsideTempFolder(filename,"singularities="*Sprint(E`pointsToAvoid));
+  //WriteInsideTempFolder(filename,"singularities="*Sprint(E`pointsToAvoid):name:=name);
   
   for i in [1..#E`ODEs] do
     ode_filename:="IVP-"*suffix(number,max_number)*"-"*suffix(i,#E`ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]));
-    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision));
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath));
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")");
-    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position));
+    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]):name:=name);
+    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath):name:=name);
+    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")":name:=name);
+    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position):name:=name);
   end for;
 
   // not required
   //filename2:="IVPs-meta-"*suffix;
-  //WriteInsideTempFolder(filename2, Sprint(E`t) : Overwrite:=true);
-  //WriteInsideTempFolder(filename2, Sprint(E`analytics));
-  //WriteInsideTempFolder(filename2,"movingBasis="*Sprint(E`movingBasis));
+  //WriteInsideTempFolder(filename2, Sprint(E`t) : Overwrite:=true,name:=name);
+  //WriteInsideTempFolder(filename2, Sprint(E`analytics):name:=name);
+  //WriteInsideTempFolder(filename2,"movingBasis="*Sprint(E`movingBasis):name:=name);
 
 end intrinsic;
 
@@ -1130,7 +1138,7 @@ end intrinsic;
 // monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
 PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
 
-intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true) -> Any
+intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
 
   if straight then
@@ -1139,23 +1147,41 @@ intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_
     path:=BreakingPath(f : randomize:=randomizePath); 
   end if;
 
-  return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials);
+  return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite, integrate:=integrate);
 end intrinsic;
 
-intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true) -> Any
+intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
 {
   Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
 }
 
-  if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials); end if;
+  if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
 
   beginningTime:=Realtime();
 
-  System("rm -fr "*PeriodSuiteTempDir()*"/*");
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision));
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])));
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])));
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials));
+  if #name eq 0 then
+    ivpdir:=PeriodSuiteTempDir();
+    System("rm -fr "*PeriodSuiteTempDir()*"/*");
+  else
+    ivpdir:=PeriodSuiteStorageDir()*name*"/";
+    if overwrite then
+      System("rm -fr "*ivpdir);
+    end if;
+    err:=System("mkdir "*ivpdir);
+    if err gt 0 then
+      error "folder name already exists, change 'name' or set 'overwrite:=true'";
+    end if;
+  end if;
+  cols := GetColumns();
+  SetColumns(0);
+  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+  SetColumns(cols);
+
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1188,35 +1214,41 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
       ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision, f1_is_smooth:=f1_is_smooth);
       Append(~allODEs,ivps`ODEs);
 
-      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1);
+      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1, name:=name);
     // to parallelize one could start integration at this point, or even sooner for each IVP
   end for;
-  printf "\n\nComputation of the differential equations is now complete (%o seconds). Starting integration.\n\n", Realtime()-tstart;
 
-  print "If this is the first time, we will compute a Pham basis for the Fermat hypersurface of degree", d, "and dimension", n;
+  print "\n\nIf this is the first time, we will compute a Pham basis for the Fermat hypersurface of degree", d, "and dimension", n;
   // intmat is not urgent, but phamB is recorded for sage to use
   phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
-
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-  /// Integration happens here ///////////
-  System("$(which sage) "*PathToSuite()*"integrator.sage");
-  ////////////////////////////////////////
-
   // define a period bundle
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
   odes:=allODEs,
   deformation:=path, cohomBasis:=ivps`movingBasis>;
 
-  if target_is_smooth then
-    bundle`primitivePeriods,bundle`precision:=loadPeriods("periods");
-    bundle:=PrimitiveToComplete(bundle);
-    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
-  else
-    bundle`loopBegins:=loadPeriods("periods1");
-    // precision is worst at the end
-    bundle`loopEnds,bundle`precision:=loadPeriods("periods2");
-    bundle`periods:=loadPeriods("limit_periods");
-    bundle:=PrimitiveToComplete(bundle);
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  if integrate then
+    printf "\nComputation of the differential equations is now complete (%o seconds). Starting integration.\n\n", Realtime()-tstart;
+    print "\n\nStarting SageMath, this may take some time...\n\n";
+    System("$(which sage) "*PathToSuite()*"integrator.sage");
+  end if;
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+
+  if integrate then
+    if target_is_smooth then
+      bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+      bundle:=PrimitiveToComplete(bundle);
+      bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+    else
+      bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+      // precision is worst at the end
+      bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+      bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+      bundle:=PrimitiveToComplete(bundle);
+    end if;
   end if;
 
   pathMons:=[#Monomials(p) : p in path];
@@ -1227,19 +1259,53 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   print "The number of monomials changed at each step:\n",pathMonsChange;
 
   print "Period homotopy is completed in", Realtime()-beginningTime, "seconds.";
+  if integrate then
+    print "The periods are correct to "*Sprint(bundle`precision)*" digits.";
+    if bundle`precision lt 20 then
+      print "Low precision is often caused by poor *integration* paths. Try the computation again or input your own integration paths for better results.";
+    end if;
+  end if;
+
+  return bundle, ivpdir;
+end intrinsic;
+
+intrinsic solveIVPs(bundle::Any,name::MonStgElt) -> Any
+{
+}
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+  ivpdir:=PeriodSuiteStorageDir()*name*"/";
+  cols := GetColumns();
+  SetColumns(0);
+  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+  SetColumns(cols);
+  System("$(which sage) "*PathToSuite()*"integrator.sage");
+
+  if isSmooth(bundle`equation) then
+    bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+    bundle:=PrimitiveToComplete(bundle);
+    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+  else
+    bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+    // precision is worst at the end
+    bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+    bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+    bundle:=PrimitiveToComplete(bundle);
+  end if;
+
   print "The periods are correct to "*Sprint(bundle`precision)*" digits.";
   if bundle`precision lt 20 then
     print "Low precision is often caused by poor *integration* paths. Try the computation again or input your own integration paths for better results.";
   end if;
 
   return bundle;
+
 end intrinsic;
 
 intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
 {
   Parses the output of integration.
 }
-  file:=Open(PeriodSuiteTempDir()*filename,"r");
+  file:=Open(filename,"r");
   s:=Gets(file);
   precision:=eval s;
   s:=Gets(file);
@@ -1893,7 +1959,7 @@ intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
   return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency,lcm;
 end intrinsic;
 
-// WARNING: N acts on the right
+// WARNING: N acts by right multiplication
 intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false) -> AlgMatElt,SeqEnum
 {
   Computes the weight filtration induced by the nilpotent operator N.
@@ -1905,7 +1971,7 @@ intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false)
   V:=VectorSpace(Rationals(),n);
   k:=orderOfN-1;
   assert N^(k+1) eq 0;
-  // indeces will be shifted by -2
+  // indices will be shifted by -2
   // filtration[i] = W_(i-2)
   filtration:=[]; 
   filtration[2*k+2]:=V; // 2k
