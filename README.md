@@ -115,7 +115,7 @@ X`primitivePeriods : the primitive periods of X.
 X`periods : the periods of X. When X is odd dimensional this coincides with the primitive periods of X.
 ```
 
-Auxiliary data are written in to the directory `incinerator`, where it is read by `integrator.sage`. As the name suggests, files in this folder are not safe as the folder will be cleared of content at the beginning of each execution of `PeriodHomotopy`. 
+Auxiliary data are written in to the directory `ode_storage/incinerator`, where it is read by `integrator.sage`. As the name suggests, files in this folder are not safe as the folder will be cleared of content at the beginning of each execution of `PeriodHomotopy`. 
 
 ### Path finder
 
