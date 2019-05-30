@@ -595,6 +595,13 @@ intrinsic Analytics(ODEs::[RngUPolElt]) -> SeqEnum
   return pairs;
 end intrinsic;
 
+intrinsic Analytics(ODEs::SeqEnum) -> SeqEnum
+{
+  Takes a nested list of ODEs and returns the nested list of [order,degree] pairs.
+}
+  return [Analytics(odes) : odes in ODEs];
+end intrinsic;
+
 // initial value problems
 IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
 
@@ -1250,9 +1257,21 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   return bundle, ivpdir;
 end intrinsic;
 
-intrinsic SolveIVPs(bundle::Any,name::MonStgElt) -> Any
+
+intrinsic SolveIVPs(name::MonStgElt) -> Any
 {
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
+}
+
+  bundle:=LoadBundle(name : withPeriods:=false);
+
+  return SolveIVPs(bundle,name);
+
+end intrinsic;
+
+intrinsic SolveIVPs(bundle::Any,name::MonStgElt) -> Any
+{
+  Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   cols := GetColumns();
@@ -1629,15 +1648,13 @@ end intrinsic;
 
 // avoid is a sequence of points in a 2 dimensional real vector space
 // maxsteps is the number of steps in the rectilinear path
-// output is a rectilinear path from 0 to 1 avoiding the list of points as much as possible
+// output is a rectilinear path from p0 to p1 avoiding the list of points as much as possible
 // N and n control the evolutionary algorithm, N=sample size, n=survivors from each generation
-intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
+intrinsic findPath(avoid::[ModTupFldElt],p0::ModTupFldElt,p1::ModTupFldElt : maxSteps:=5, n:=5,N:=100) -> Any,Any
 {
-  Uses an evolutionary algorithm to find a rectilinear path from 0 to 1 in the real plane avoiding the points in the list "avoid".
+  Uses an evolutionary algorithm to find a rectilinear path from p0 to p1 in the real plane avoiding the points in the list "avoid".
 }
-  V:=VectorSpace(RealField(20),2);
-  p0:=V!0;
-  p1:=V![1,0];
+  V:=Parent(p0); // the real plane, i.e. a vector space of dim 2 over a real field
   avoid:=[a : a in avoid | not ((a eq p0) or (a eq p1))];
 
   if #avoid eq 0 then 
@@ -1689,6 +1706,19 @@ intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
   ParallelSort(~weights,~bestPaths);
 
   return bestPaths[1], weights[1];
+end intrinsic;
+
+intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
+{
+  Uses an evolutionary algorithm to find a rectilinear path from 0 to 1 in the real plane avoiding the points in the list "avoid".
+}
+  if #avoid eq 0 then
+    V:=VectorSpace(RealField(20),2);
+  else 
+    V:=Parent(avoid[1]);
+  end if;
+  p0:=V!0; p1:=V![1,0];
+  return findPath(avoid,p0,p1 : maxSteps:=maxSteps, n:=n,N:=n);
 end intrinsic;
 
 
@@ -1973,11 +2003,14 @@ intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   V:=VectorSpace(RealField(20),2);
   loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
   // in future, this should be combined with path finder
-  path_before_loop_head:=[V!0];
+  // remove 1 from the set of singularities
+  avoid:=Remove(sings,Index(sings,1));
+  path_before_loop_head:=findPath(avoid,V!0,loop_head[1]);
   path_end:=[V![1,0]];
+  path:=path_before_loop_head cat loop_head[[2,3,4,5]] cat path_end;
 
   // third entry records the position of the loop head
-  return path_before_loop_head cat loop_head cat path_end, sings, #path_before_loop_head+1;
+  return path, sings, #path_before_loop_head;
 end intrinsic;
 
 
