@@ -13,30 +13,36 @@ intrinsic PeriodSuiteStorageDir(:subfolder:="") -> MonStgElt
  Returns the directory for intermediate computational results that may be reused. 
 }
   if #subfolder eq 0 then
-    return PathToSuite()*"freezer/";
+    return PathToSuite()*"fermat_data/";
   else
-    return PeriodSuiteStorageDir()*subfolder*"/";
+    return PathToSuite()*"fermat_data/"*subfolder*"/";
   end if;
 end intrinsic;
 
-intrinsic PeriodSuiteTempDir() -> MonStgElt
+intrinsic PeriodSuiteTempDir(:subfolder:="") -> MonStgElt
 {
  Returns the directory for temp files of period-suite. 
 }
-  return PathToSuite()*"incinerator/";
+  if #subfolder eq 0 then
+    return PathToSuite()*"ode_storage/incinerator/";
+  else 
+    return PathToSuite()*"ode_storage/"*subfolder*"/";
+  end if;
 end intrinsic;
 
-intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false, name:="")
+intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false, name:="",createFolder:=false)
 {
   Writes the string to filename inside the appropriate folder within period-suite. Takes care of line breaking issues.
 }
   cols := GetColumns();
-  if #name eq 0 then
-    target:=PeriodSuiteTempDir()*filename;
-  else
-    target:=PeriodSuiteStorageDir(:subfolder:=name)*filename;
-  end if;
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  target:=ivpdir*filename;
   SetColumns(0);
+  if (#name gt 0) and createFolder then
+    if System("[ -d "*ivpdir*" ]") gt 0 then
+      System("mkdir "*ivpdir);
+    end if;
+  end if;
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
 end intrinsic;
@@ -1158,25 +1164,19 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
 
   beginningTime:=Realtime();
-
-  if #name eq 0 then
-    ivpdir:=PeriodSuiteTempDir();
-    System("rm -fr "*PeriodSuiteTempDir()*"/*");
-  else
-    ivpdir:=PeriodSuiteStorageDir()*name*"/";
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+  // check if ivpdir exists
+  if System("[ -d "*ivpdir*" ]") eq 0 then
     if overwrite then
-      System("rm -fr "*ivpdir);
-    end if;
-    err:=System("mkdir "*ivpdir);
-    if err gt 0 then
+      System("rm -fr "*ivpdir*"*");
+    else
       error "folder name already exists, change 'name' or set 'overwrite:=true'";
     end if;
+  else 
+    System("mkdir "*ivpdir);
   end if;
-  cols := GetColumns();
-  SetColumns(0);
-  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-  SetColumns(cols);
-
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
@@ -1198,6 +1198,8 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
+  // but we can only bound pole order, if there is non-zero outside of H^{n/2,n/2}
+  if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
   pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
 
   allODEs:=[];
@@ -1225,57 +1227,37 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
   odes:=allODEs,
   deformation:=path, cohomBasis:=ivps`movingBasis>;
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
 
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
   if integrate then
-    printf "\nComputation of the differential equations is now complete (%o seconds). Starting integration.\n\n", Realtime()-tstart;
-    print "\n\nStarting SageMath, this may take some time...\n\n";
-    System("$(which sage) "*PathToSuite()*"integrator.sage");
+    print "Starting integration.\n\n";
+    bundle:=SolveIVPs(bundle,name);
   end if;
   ////////////////////////////////////////
   ////////////////////////////////////////
-
-  if integrate then
-    if target_is_smooth then
-      bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
-      bundle:=PrimitiveToComplete(bundle);
-      bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
-    else
-      bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
-      // precision is worst at the end
-      bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
-      bundle`periods:=loadPeriods(ivpdir*"limit_periods");
-      bundle:=PrimitiveToComplete(bundle);
-    end if;
-  end if;
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
 
-  print "Period homotopy is completed in", Realtime()-beginningTime, "seconds.";
-  if integrate then
-    print "The periods are correct to "*Sprint(bundle`precision)*" digits.";
-    if bundle`precision lt 20 then
-      print "Low precision is often caused by poor *integration* paths. Try the computation again or input your own integration paths for better results.";
-    end if;
-  end if;
+  if #name gt 0 then SaveBundle(bundle,name); end if;
 
   return bundle, ivpdir;
 end intrinsic;
 
-intrinsic solveIVPs(bundle::Any,name::MonStgElt) -> Any
+intrinsic SolveIVPs(bundle::Any,name::MonStgElt) -> Any
 {
+  Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
 }
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-  ivpdir:=PeriodSuiteStorageDir()*name*"/";
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   cols := GetColumns();
   SetColumns(0);
+  print "\n\nStarting SageMath, this may take some time...\n\n";
   Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
   SetColumns(cols);
   System("$(which sage) "*PathToSuite()*"integrator.sage");
@@ -1299,6 +1281,131 @@ intrinsic solveIVPs(bundle::Any,name::MonStgElt) -> Any
 
   return bundle;
 
+end intrinsic;
+
+intrinsic LoadBundle(name::MonStgElt : withPeriods:=false) -> Any
+{
+  Reads the "bundle" file written under the storage directory with the given name, construct the corresponding PeriodBundle and returns it.
+}
+
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  filename:=ivpdir*"bundle";
+  file:=Open(filename,"r");
+  bundle:=rec<PeriodBundle | >;
+  poly:=func<cofs,exps,polyring | &+[ cofs[i]*Monomial(polyring,exps[i]) : i in [1..#cofs]]>;
+  field:=eval(Gets(file));
+  N:=eval(Gets(file));
+  varnames:=eval(Gets(file));
+  P:=PolynomialRing(field,N);
+  AssignNames(~P,varnames);
+  cofs:=eval(Gets(file));
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`equation:=poly(cofs,exps,P);
+  bundle`degree :=Degree(bundle`equation);
+  bundle`dimension :=N-2;
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  cofs:=eval(str);
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`cohomBasis :=[poly(cofs[i],exps[i],P) : i in [1..#cofs]];
+  phamB,intmat:=WriteToFileHomAndCohOfFermat(bundle`dimension,bundle`degree);
+  bundle`phamBasis:=phamB; bundle`primitiveIntersectionMatrix:=Matrix(intmat);
+
+  K<t>:=FunctionField(field);
+  RR<D>:=PolynomialRing(K); 
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  bundle`odes:=eval(str);
+
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  cofs:=eval(str);
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`deformation :=[poly(cofs[i],exps[i],P) : i in [1..#cofs]];
+
+  if withPeriods then 
+    target_is_smooth:=isSmooth(bundle`equation);
+    periodsExist:=System("[ -f "*ivpdir*"periods ]") eq 0;
+    loopPeriodsExist:=System("[ -f "*ivpdir*"periods1 ]") eq 0;
+    if target_is_smooth and periodsExist then
+      bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+      bundle:=PrimitiveToComplete(bundle);
+      bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+    elif (not target_is_smooth) and loopPeriodsExist then
+      bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+      // precision is worst at the end
+      bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+      bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+      bundle:=PrimitiveToComplete(bundle);
+    end if;
+  end if;
+
+  return bundle;
+
+end intrinsic;
+
+intrinsic SaveBundle(periodBundle::Any, name::MonStgElt)
+{
+  Saves the state of a period bundle prior to the integration of IVPs into the storage directory under the given name.
+}
+// if folder does not exist, creates it
+// if the file inside exists, overwrites it
+  cols:=GetColumns();
+  SetColumns(0);
+  X:=periodBundle;
+  P:=Parent(X`equation); varnames:=Names(P);
+  N:=Ngens(P); field:=CoefficientRing(P);
+  str:="";
+
+  // do not change the order, unless you also change LoadBundle
+  // better would have been to have a uniform way to write things to file
+  // as in to say "how many lines are to be read to constitute one input"
+  // and then the input
+  // we do this below only where necessary
+
+  str *:=Sprint(field,"Magma")*"\n";
+  str *:=Sprint(N)*"\n";
+  str *:=Sprint(varnames,"Magma")*"\n";
+  cofs,mons:=CoefficientsAndMonomials(X`equation);
+  exps:=[Exponents(m) : m in mons];
+  str *:=Sprint(cofs,"Magma")*"\n";
+  str *:=Sprint(#exps+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+  cofs:=[Coefficients(omega) : omega in X`cohomBasis];
+  exps:=[[Exponents(m) : m in Monomials(omega)] : omega in X`cohomBasis];
+  str *:= Sprint(#cofs+2)*"\n";
+  str *:=Sprint(cofs , "Magma")*"\n";
+  str *:= Sprint(&+[#e+2 : e in exps]+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+  str *:=Sprint(&+[#odes+2 : odes in X`odes]+2)*"\n";
+  str *:=Sprint(X`odes)*"\n";
+  cofs:=[Coefficients(p) : p in X`deformation];
+  exps:=[[Exponents(m) : m in Monomials(p)] : p in X`deformation];
+  str *:= Sprint(#cofs+2)*"\n";
+  str *:=Sprint(cofs , "Magma")*"\n";
+  str *:= Sprint(&+[#e+2 : e in exps]+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+
+  WriteInsideTempFolder("bundle",str : name:=name, Overwrite:=true, createFolder:=true);
+  SetColumns(cols);
 end intrinsic;
 
 intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
@@ -1641,7 +1748,7 @@ intrinsic addSegment(path::[ModTupFldElt],newPoint::ModTupFldElt,avoid::[ModTupF
   return Append(path,newPoint),wt,problem;
 end intrinsic;
 
-intrinsic test() -> Rec
+intrinsic test( : name:="") -> Rec
 { Try a simple polynomial with PeriodHomotopy. }
   P3<x,y,z,w>:=PolynomialRing(Rationals(),4);
   path:=[
@@ -1650,7 +1757,7 @@ intrinsic test() -> Rec
   4*x^4 - 6*x*w^3 + 2*y^4 - 6*z^4,
   4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4
   ];
-  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0);
+  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0,name:=name, overwrite:=true);
   //f:=4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4;
   //PeriodHomotopy(f : pathfinder:=1);
 end intrinsic;
