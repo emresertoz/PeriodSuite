@@ -1149,7 +1149,7 @@ end intrinsic;
 // loopBegins,loopEnds: the periods of a hypersurface near the singular target hypersurface, before and after a looping around the target
 // primitiveToComplete: transition matrix for converting primitive periods to complete periods
 // monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol, name>;
 
 intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
@@ -1233,7 +1233,9 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   // define a period bundle
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
   odes:=allODEs,
-  deformation:=path, cohomBasis:=ivps`movingBasis>;
+  deformation:=path, cohomBasis:=ivps`movingBasis,
+  name:=name
+  >;
   printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
 
   ////////////////////////////////////////
@@ -1252,7 +1254,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
 
-  if #name gt 0 then SaveBundle(bundle,name); end if;
+  if #name gt 0 then SaveBundle(bundle); end if;
 
   return bundle, ivpdir;
 end intrinsic;
@@ -1310,7 +1312,7 @@ intrinsic LoadBundle(name::MonStgElt : withPeriods:=false) -> Any
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   filename:=ivpdir*"bundle";
   file:=Open(filename,"r");
-  bundle:=rec<PeriodBundle | >;
+  bundle:=rec<PeriodBundle | name:=name >;
   poly:=func<cofs,exps,polyring | &+[ cofs[i]*Monomial(polyring,exps[i]) : i in [1..#cofs]]>;
   field:=eval(Gets(file));
   N:=eval(Gets(file));
@@ -1381,15 +1383,25 @@ intrinsic LoadBundle(name::MonStgElt : withPeriods:=false) -> Any
 
 end intrinsic;
 
+
 intrinsic SaveBundle(periodBundle::Any, name::MonStgElt)
 {
-  Saves the state of a period bundle prior to the integration of IVPs into the storage directory under the given name.
+  Saves the state of a period bundle prior to the integration of IVPs into the storage directory into the folder "name".
+}
+  periodBundle`name:=name;
+  SaveBundle(periodBundle);
+end intrinsic;
+
+intrinsic SaveBundle(periodBundle::Any)
+{
+  Saves the state of a period bundle prior to the integration of IVPs into the storage directory into a folder named after the name of the bundle (bundle`name).
 }
 // if folder does not exist, creates it
 // if the file inside exists, overwrites it
   cols:=GetColumns();
   SetColumns(0);
   X:=periodBundle;
+  name:=X`name;
   P:=Parent(X`equation); varnames:=Names(P);
   N:=Ngens(P); field:=CoefficientRing(P);
   str:="";
@@ -1563,8 +1575,7 @@ Computes a sequence of rectilinear paths in the complex plane avoiding any singu
     avoidPoints:=planeToComplex(avoid);
     loop_position:=-1;
   else 
-    PathFinder:=FormLoop;
-    path,avoid,loop_position:=PathFinder(f0,f1);
+    path,avoid,loop_position:=FormLoop(f0,f1 : pathfinder:=pathfinder);
     avoidPoints:=avoid;
   end if;
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
@@ -1989,7 +2000,7 @@ intrinsic CoordinatesInReducedCohomologyBasis(f::RngMPolElt,basis::[RngMPolElt],
   return [Coordinates(W,W!b) : b in rb2];
 end intrinsic;
 
-intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
+intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt : pathfinder:=0) -> SeqEnum
 {
   Computes a path which goes from f0 to some g near f1 and loops counterclockwise around f1 back to g. This loop contains no other singular hypersurfaces except f1, which is assumed to be singular.
 }
@@ -2003,14 +2014,18 @@ intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   V:=VectorSpace(RealField(20),2);
   loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
   // in future, this should be combined with path finder
-  // remove 1 from the set of singularities
-  avoid:=Remove(sings,Index(sings,1));
+  // remove 1 from the set of singularities and cast complex points to real plane
+  if pathfinder eq 1 then
+    avoid:=complexToPlane(Remove(sings,Index(sings,1)));
+  else 
+    avoid:=[];
+  end if;
   path_before_loop_head:=findPath(avoid,V!0,loop_head[1]);
   path_end:=[V![1,0]];
   path:=path_before_loop_head cat loop_head[[2,3,4,5]] cat path_end;
 
   // third entry records the position of the loop head
-  return path, sings, #path_before_loop_head;
+  return path, avoid, #path_before_loop_head;
 end intrinsic;
 
 
@@ -2178,4 +2193,17 @@ intrinsic DifferentiateCohomology(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   return CoordinatesInCohomology(f0,B,[DifferentiateForm(q,f0,f1) : q in B]);
 end intrinsic;
 
-
+intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
+{
+  Changes the integration paths for the deformation family that is specified by the given number.
+}
+  number:=family_number;
+  def:=X`deformation;
+  odes:=X`odes[number];
+  f0:=def[number]; f1:=def[number+1];
+  integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder);
+  for i in [1..#odes] do
+    ode_filename:="IVP-"*suffix(number,#def-1)*"-"*suffix(i,#odes)*".sage";
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=X`name);
+  end for;
+end intrinsic;
