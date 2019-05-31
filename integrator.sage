@@ -30,7 +30,8 @@ def integrate_ode_with_loop(ode_label):
     path2=path[loop_position-1:-1]
 ## not super efficient!
     #path3=[path[loop_position],path[len(path)-1]]
-    path3=[path[0],path[-1]]
+    #path3=[path[0],path[-1]]
+    path3=path
     tm1=ode.numerical_transition_matrix(path1, 10^(-precision), assume_analytic=true)
     #print "\tODE", label, "is completed until loop. Max error: ", max(tm1.apply_map(lambda x : x.diameter()).list())
     tm2=ode.numerical_transition_matrix(path2, 10^(-precision), assume_analytic=true)
@@ -220,9 +221,15 @@ def logarithm_of_monodromy(T):
 
 def limit_in_grassmanian(V):
     minors=V.minors(dimp)
+    print minors
     leading=min([a.low_degree(x-1) for a in minors])
+    print "leading order"
+    print leading
     limit=[field(a.coefficient((x-1)^leading)) for a in minors]
+    if leading == 0:
+        limit=[field(a.substitute({(x-1):0}).substitute({x:1})) for a in minors]
     #if all([l.contains_zero() for l in limit]):
+        #limit=[field(a.coefficient((x-1)^(leading+1/2))) for a in minors]
         #raise ValueError, "limit_in_grassmanian function needs to be careful in cancelling coefficients"
     return limit #matrix([[a.coefficient((x-1)^leading) for a in minors]])
 # it might be better to find the index of the minor with smallest coefficient and then

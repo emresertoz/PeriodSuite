@@ -1243,7 +1243,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   ////////////////////////////////////////
   if integrate then
     print "Starting integration.\n\n";
-    bundle:=SolveIVPs(bundle,name);
+    bundle:=SolveIVPs(bundle);
   end if;
   ////////////////////////////////////////
   ////////////////////////////////////////
@@ -1267,14 +1267,15 @@ intrinsic SolveIVPs(name::MonStgElt) -> Any
 
   bundle:=LoadBundle(name : withPeriods:=false);
 
-  return SolveIVPs(bundle,name);
+  return SolveIVPs(bundle);
 
 end intrinsic;
 
-intrinsic SolveIVPs(bundle::Any,name::MonStgElt) -> Any
+intrinsic SolveIVPs(bundle::Any) -> Any
 {
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
+  name:=bundle`name;
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   cols := GetColumns();
   SetColumns(0);
