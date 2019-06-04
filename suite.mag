@@ -648,6 +648,7 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
 
   // setting up integration paths, unless specified
   avoid:=[];
+  loop_position:=-1;
   if #integrationPath eq 0 then
     // we will use the pathfinder algorithm specified by the integer pathfinder
     integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder : f1_is_smooth:=f1_is_smooth);
