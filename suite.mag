@@ -1171,6 +1171,10 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 
   if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
 
+  if not IsFermat(path[1]) then
+    error "The initial polynomial is not of fermat type." ;
+  end if;
+
   beginningTime:=Realtime();
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   // if no name has been specified then set overwrite to true and clear ivpdir
