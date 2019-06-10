@@ -1932,8 +1932,10 @@ intrinsic HodgeLattice(X::Rec : offset:=20 , precision:=X`precision) -> Rec
   Takes the output of PeriodHomotopy and computes the lattice of Hodge cycles of middle dimension for the target hypersurface.
 }
 
+  assert X`dimension mod 2 eq 0;
   // the dimension of F^(n/2+1)
-  dim:=Binomial(Ceiling(X`dimension/2)*X`degree,X`dimension+2);
+  dim:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * X`dimension/2 - X`dimension-2)];
+   // Binomial(Ceiling(X`dimension/2)*X`degree,X`dimension+2);
   // in case full matrix of periods are computed, we use only half
   rho,basis:=LatticeOfRelations(Matrix(X`periods[1..dim]),precision: offset:=offset);
 
@@ -2215,4 +2217,26 @@ intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
     ode_filename:="IVP-"*suffix(number,#def-1)*"-"*suffix(i,#odes)*".sage";
     WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=X`name);
   end for;
+end intrinsic;
+
+intrinsic PeriodsOfHodgeClasses(X::Rec,hodgeClasses::Any) -> Any
+{
+  Computes the periods of given Hodge classes against F^(n/2). Hodge classes must be given as rows of a matrix, each row representing the coordinates of the Hodge class with respect to the Hodge lattice (X`hodgeLattice`basis).
+}
+
+  assert (X`dimension mod 2) eq 0;
+  // dimension of F^(n/2)
+  dim:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (1+X`dimension/2) - X`dimension-2)];
+  periods:=Matrix(X`periods[1..dim]);
+  NS:=Matrix(X`hodgeLattice`basis);
+  CC<I>:=Parent(X`periods[1,1]);
+  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeClasses)*NS,CC)*Transpose(X`periods);
+
+end intrinsic;
+
+intrinsic round(matrix ::ModMatFldElt : dec:=5) -> Any
+{
+  Given a matrix with floating point entries, rounds each entry to "dec" number of decimal points.
+}
+  return Matrix(Nrows(matrix),Ncols(matrix),[ComplexField(dec)| (Abs(e) lt 10^-dec) select 0 else e : e in Eltseq(matrix)]);
 end intrinsic;
