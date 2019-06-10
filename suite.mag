@@ -1016,48 +1016,48 @@ intrinsic LatticeElementsOfNormAndDegree(lattice::AlgMatElt,polarization::ModMat
 end intrinsic;
 
 
-intrinsic MinimalPolynomials(pers::SeqEnum : precision:=500, max_order:=30) -> Any,Any,Any//[RngUPolElt],[FldReElt],[RngIntElt]
-{
-  Takes a sequence of complex numbers each of which are suspected to approximate an algebraic number to much more than "precision" number of digits. The first output is the list of suspected minimal polynomials of the corresponding algebraic numbers. Second output is the list of norms of these polynomials evaluated at the corresponding approximate number. The third list contains a list of indices where the given polynomial is likely to be wrong.
-}
-  position:=0;
-  polys:=[];
-  bad:=[];
-  errs:=[RealField(1)|];
-  CC<I>:=Parent(pers[1]);
-  T<t>:=PolynomialRing(Rationals());
-  for p in pers do
-    position +:= 1;
-    print "position: ", position;
-    print "norm: ", Sqrt(Norm(p));
-    //if position ne 2 then continue; end if;
-    if Norm(p) lt 10^-(precision) then 
-      Append(~polys,T!0);
-      continue;
-    end if;
-    rr:=Sqrt(Norm(p));
-    significand,exponent:=ScientificNotation(rr);
-    r:=CC!(p/(significand*10^exponent));
-    //r:=p/Sqrt(Norm(p));
-    m:=Matrix([[r^i : i in [0..max_order]]]);
-    _,rels:=LatticeOfRelations(m,precision : offset:=Ceiling(precision/10), ForceRelation:=true);
-    _,best_relation_no:=Minimum([Maximum([ j : j in [1..#rels[i]] | rels[i,j] ne 0]) : i in [1..#rels]]);
-    rel:=rels[best_relation_no];
-    pol:=&+[ rel[i]*t^(i-1) : i in [1..#rel]];
-    factors:=[fctr[1] : fctr in Factorization(pol)];
-    evals:=[RealField(1)| Norm(Evaluate(fctr,r)) : fctr in factors];
-    ParallelSort(~evals,~factors);
-    //pol:=Evaluate(factors[1],t*(significand*10^exponent));
-    // clear denominators
-    pol:=Evaluate(factors[1],T.1/(significand*10^exponent));
-    pol:=ClearDenominatorsOfPolynomial(pol);
-    Append(~polys,pol);
-    Append(~errs,Sqrt(Norm(Evaluate(pol,p))));
-    if #rels eq 1 then Append(~bad,position); end if;
-  end for;
-
-  return polys, errs, bad;
-end intrinsic;
+//intrinsic MinimalPolynomials(pers::SeqEnum : precision:=500, max_order:=30) -> Any,Any,Any//[RngUPolElt],[FldReElt],[RngIntElt]
+//{
+//  Takes a sequence of complex numbers each of which are suspected to approximate an algebraic number to much more than "precision" number of digits. The first output is the list of suspected minimal polynomials of the corresponding algebraic numbers. Second output is the list of norms of these polynomials evaluated at the corresponding approximate number. The third list contains a list of indices where the given polynomial is likely to be wrong.
+//}
+//  position:=0;
+//  polys:=[];
+//  bad:=[];
+//  errs:=[RealField(1)|];
+//  CC<I>:=Parent(pers[1]);
+//  T<t>:=PolynomialRing(Rationals());
+//  for p in pers do
+//    position +:= 1;
+//    print "position: ", position;
+//    //print "norm: ", Sqrt(Norm(p));
+//    //if position ne 2 then continue; end if;
+//    if Norm(p) lt 10^-(precision) then 
+//      Append(~polys,T!0);
+//      continue;
+//    end if;
+//    rr:=Sqrt(Norm(p));
+//    significand,exponent:=ScientificNotation(rr);
+//    r:=CC!(p/(significand*10^exponent));
+//    //r:=p/Sqrt(Norm(p));
+//    m:=Matrix([[r^i : i in [0..max_order]]]);
+//    _,rels:=LatticeOfRelations(m,precision : offset:=Ceiling(precision/10), ForceRelation:=true);
+//    _,best_relation_no:=Minimum([Maximum([ j : j in [1..#rels[i]] | rels[i,j] ne 0]) : i in [1..#rels]]);
+//    rel:=rels[best_relation_no];
+//    pol:=&+[ rel[i]*t^(i-1) : i in [1..#rel]];
+//    factors:=[fctr[1] : fctr in Factorization(pol)];
+//    evals:=[RealField(1)| Norm(Evaluate(fctr,r)) : fctr in factors];
+//    ParallelSort(~evals,~factors);
+//    //pol:=Evaluate(factors[1],t*(significand*10^exponent));
+//    // clear denominators
+//    pol:=Evaluate(factors[1],T.1/(significand*10^exponent));
+//    pol:=ClearDenominatorsOfPolynomial(pol);
+//    Append(~polys,pol);
+//    Append(~errs,Sqrt(Norm(Evaluate(pol,p))));
+//    if #rels eq 1 then Append(~bad,position); end if;
+//  end for;
+//
+//  return polys, errs, bad;
+//end intrinsic;
 
 
 intrinsic ScientificNotation(r::FldReElt : base:=10) -> RngIntElt, RngIntElt
@@ -1210,7 +1210,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
-  // but we can only bound pole order, if there is non-zero outside of H^{n/2,n/2}
+  // but we can only bound pole order, if there is non-zero classes outside of H^{n/2,n/2}
   if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
   pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
 
@@ -1927,12 +1927,15 @@ end intrinsic;
 hodgeLattice := recformat<rank,lattice,basis,polarization,degrees,parameters>;
 
 
-intrinsic HodgeLattice(X::Rec : offset:=20) -> Rec
+intrinsic HodgeLattice(X::Rec : offset:=20 , precision:=X`precision) -> Rec
 {
   Takes the output of PeriodHomotopy and computes the lattice of Hodge cycles of middle dimension for the target hypersurface.
 }
 
-  rho,basis:=LatticeOfRelations(X`periods,X`precision: offset:=offset);
+  // the dimension of F^(n/2+1)
+  dim:=Binomial(Ceiling(X`dimension/2)*X`degree,X`dimension+2);
+  // in case full matrix of periods are computed, we use only half
+  rho,basis:=LatticeOfRelations(Matrix(X`periods[1..dim]),precision: offset:=offset);
 
   IM:=X`intersectionMatrix;
   hyp:=X`polarization;

@@ -9,7 +9,8 @@ import time
 from ore_algebra import *
 DOP, t, D = DifferentialOperators()
 
-field=ComplexBallField(round(log(10^(precision+10))/log(2))+100)
+bit_precision=ceil(log(10^(precision+10))/log(2))+100
+field=ComplexBallField(bit_precision)
 
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
