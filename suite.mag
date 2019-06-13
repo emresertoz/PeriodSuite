@@ -2241,3 +2241,114 @@ intrinsic round(matrix ::ModMatFldElt : dec:=5) -> Any
 }
   return Matrix(Nrows(matrix),Ncols(matrix),[ComplexField(dec)| (Abs(e) lt 10^-dec) select 0 else e : e in Eltseq(matrix)]);
 end intrinsic;
+
+
+// lattice is a matrix representing the intersection product on the picard group of a k3 surface
+// polarization is the coordinates of a very ample line bundle in the picard group
+// degree is the maximal degree of rational curves which will be computed
+intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
+{
+  Computes the smooth rational curves inside the Picard lattice of a K3 surface. (Currently implemented only upto degree three.)
+}
+
+  if not degree eq 3 then return Error("Not implemented"); end if;
+
+  // rank of lattice
+  rho:=Ncols(lattice);
+  //basis
+  id:=IdentityMatrix(Integers(),rho);
+  // degree of polarization 
+  d:=norm(polarization,lattice);
+
+  // projection map (scaled by d)
+  // d*id - lattice*polarization
+  proj:=Matrix([ d*e - inner(e,lattice,polarization)*polarization[1] : e in Rows(id) ]);
+  basis:=Matrix(Basis(RowSpace(proj)));
+  prim:=-basis*lattice*Transpose(basis);
+  gcd:=GCD(Eltseq(prim));
+  primReduced:=Matrix(rho-1,rho-1, [Integers()|p/gcd : p in Eltseq(prim)]);
+  L:=Lattice(IdentityMatrix(Integers(),Nrows(basis)),primReduced);
+
+
+  // find potential rational curves
+  // you could do better here -- just compute all weights in a range?
+  all_curves:=[**];
+  for i in [1..degree] do
+    // norm of the projection of a rational curve of degree i is kappa[i]
+    kappa:=(d*(2*d+i^2)/gcd); 
+    if IsIntegral(kappa) then
+      kappa:= Integers()!kappa;
+      sv:=ShortVectors(L,kappa,kappa);
+    else
+      sv:=[];
+    end if;
+    // add or subtract polarization
+    candidates:=[ Matrix(s[1])*basis + i*polarization: s in sv] cat [ Matrix(s[1])*basis - i*polarization : s in sv];
+    // check the ones that would be integral even after dividing by d
+    divisible:=[ Vector(l) : l in candidates | GCD(Eltseq(l)) mod d eq 0 ];
+    // now fix the signs of non-effective classes
+    finalists:=[];
+    for l in divisible do
+      if inner(l,lattice,polarization) gt 0 then
+        Append(~finalists,l);
+      else
+        Append(~finalists,-l);
+      end if;
+    end for;
+
+    // in case of duplicates, we trim them
+    trim:=Seqset(finalists);
+
+    // now divide 
+    curves:=[ Vector([Integers()!(e/d) : e in Eltseq(l) ])  : l in trim];
+    Append(~all_curves,curves);
+  end for;
+
+    // this could be automated for arbitrary degrees, but the fast version is here
+  lines:=all_curves[1];
+
+  if #lines eq 0 then
+    quadrics:=all_curves[2];
+    twisted_cubics:=all_curves[3];
+  else
+    linePairing:=Matrix(lines)*lattice*Transpose(Matrix(lines));
+    // i1,i2 indicies of two lines in lines
+    function lines_intersect(i1,i2)
+      return linePairing[i1,i2] eq 1;
+    end function;
+
+    print "planar pairs";
+    planar_pairs:={lines[i]+lines[j] : i,j in [1..#lines] | lines_intersect(i,j)};
+
+    quadrics:=Setseq({ q : q in all_curves[2] | not q in planar_pairs});
+
+    degenerate_cubics1:=[];
+    for i in [1..#lines] do
+      // find triplets i,j,k such that li intersects lj and lk but lj does not intersect lk
+      // as i is distinguished here, we put that first, but j and k are not distinguished so
+      // we order according to magnitude, so the triplets [i,j < k] are unique
+      // we retain the sum li+lj+lk
+      degenerate_cubics1 cat:=[&+lines[[i,j,k]] : j,k in [1..#lines]| j lt k and lines_intersect(i,j) and lines_intersect(i,k) and (not lines_intersect(j,k))];
+    end for;
+
+    if #quadrics eq 0 then
+      degenerate_cubics2:=[];
+    else
+      line_cap_quadric:=Matrix(lines)*lattice*Transpose(Matrix(quadrics));
+      degenerate_cubics2:=[ lines[i]+quadrics[j] : i in [1..#lines], j in [1..#quadrics] | line_cap_quadric[i,j] eq 1 ];
+    end if;
+
+    degenerate_cubics:=Seqset(degenerate_cubics1 cat degenerate_cubics2);
+    twisted_cubics:=Setseq(Seqset(all_curves[3]) diff degenerate_cubics);
+
+  end if;
+
+
+  // if degree is greater than 3 then use the following... not implemented yet
+  
+
+  print "The number of lines, quadrics, twisted cubics:";
+  print #lines,#quadrics,#twisted_cubics;
+
+  return lines, quadrics,twisted_cubics;
+end intrinsic;
