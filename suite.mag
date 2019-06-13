@@ -2219,18 +2219,19 @@ intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
   end for;
 end intrinsic;
 
-intrinsic PeriodsOfHodgeClasses(X::Rec,hodgeClasses::Any) -> Any
+intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any) -> Any
 {
-  Computes the periods of given Hodge classes against F^(n/2). Hodge classes must be given as rows of a matrix, each row representing the coordinates of the Hodge class with respect to the Hodge lattice (X`hodgeLattice`basis).
+  Computes the periods of given Hodge classes against H^(n/2,n/2). Hodge classes must be given as rows of a matrix, each row representing the coordinates of the Hodge class with respect to the Hodge lattice (X`hodgeLattice`basis).
 }
 
   assert (X`dimension mod 2) eq 0;
-  // dimension of F^(n/2)
-  dim:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (1+X`dimension/2) - X`dimension-2)];
-  periods:=Matrix(X`periods[1..dim]);
+  // dimensions of filtrations, so that dim H^(n/2,n/2) = dim2-dim1
+  dim1:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (X`dimension/2) - X`dimension-2)];
+  dim2:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (1+X`dimension/2) - X`dimension-2)];
+  periods:=Matrix(X`periods[(dim1+2)..dim2]);
   NS:=Matrix(X`hodgeLattice`basis);
   CC<I>:=Parent(X`periods[1,1]);
-  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeClasses)*NS,CC)*Transpose(X`periods);
+  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeCycles)*NS,CC)*Transpose(X`periods);
 
 end intrinsic;
 
