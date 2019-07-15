@@ -961,7 +961,7 @@ end intrinsic;
 // the orthogonal complement of the polarization is assumed negative definite
 intrinsic LatticeElementsOfNormAndDegree(lattice::AlgMatElt,polarization::ModMatRngElt,N::RngIntElt,d1::RngIntElt,d2::RngIntElt) -> Any
 {
- lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of rho is assumed to be negative definite. For an elemend D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
+ lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of polarization is assumed to be negative definite. For an elemend D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
 }
 
   // rank of lattice
@@ -1016,48 +1016,48 @@ intrinsic LatticeElementsOfNormAndDegree(lattice::AlgMatElt,polarization::ModMat
 end intrinsic;
 
 
-//intrinsic MinimalPolynomials(pers::SeqEnum : precision:=500, max_order:=30) -> Any,Any,Any//[RngUPolElt],[FldReElt],[RngIntElt]
-//{
-//  Takes a sequence of complex numbers each of which are suspected to approximate an algebraic number to much more than "precision" number of digits. The first output is the list of suspected minimal polynomials of the corresponding algebraic numbers. Second output is the list of norms of these polynomials evaluated at the corresponding approximate number. The third list contains a list of indices where the given polynomial is likely to be wrong.
-//}
-//  position:=0;
-//  polys:=[];
-//  bad:=[];
-//  errs:=[RealField(1)|];
-//  CC<I>:=Parent(pers[1]);
-//  T<t>:=PolynomialRing(Rationals());
-//  for p in pers do
-//    position +:= 1;
-//    print "position: ", position;
-//    //print "norm: ", Sqrt(Norm(p));
-//    //if position ne 2 then continue; end if;
-//    if Norm(p) lt 10^-(precision) then 
-//      Append(~polys,T!0);
-//      continue;
-//    end if;
-//    rr:=Sqrt(Norm(p));
-//    significand,exponent:=ScientificNotation(rr);
-//    r:=CC!(p/(significand*10^exponent));
-//    //r:=p/Sqrt(Norm(p));
-//    m:=Matrix([[r^i : i in [0..max_order]]]);
-//    _,rels:=LatticeOfRelations(m,precision : offset:=Ceiling(precision/10), ForceRelation:=true);
-//    _,best_relation_no:=Minimum([Maximum([ j : j in [1..#rels[i]] | rels[i,j] ne 0]) : i in [1..#rels]]);
-//    rel:=rels[best_relation_no];
-//    pol:=&+[ rel[i]*t^(i-1) : i in [1..#rel]];
-//    factors:=[fctr[1] : fctr in Factorization(pol)];
-//    evals:=[RealField(1)| Norm(Evaluate(fctr,r)) : fctr in factors];
-//    ParallelSort(~evals,~factors);
-//    //pol:=Evaluate(factors[1],t*(significand*10^exponent));
-//    // clear denominators
-//    pol:=Evaluate(factors[1],T.1/(significand*10^exponent));
-//    pol:=ClearDenominatorsOfPolynomial(pol);
-//    Append(~polys,pol);
-//    Append(~errs,Sqrt(Norm(Evaluate(pol,p))));
-//    if #rels eq 1 then Append(~bad,position); end if;
-//  end for;
-//
-//  return polys, errs, bad;
-//end intrinsic;
+intrinsic MinimalPolynomials(pers::SeqEnum : precision:=500, max_order:=30) -> Any,Any,Any//[RngUPolElt],[FldReElt],[RngIntElt]
+{
+  Takes a sequence of complex numbers each of which are suspected to approximate an algebraic number to much more than "precision" number of digits. The first output is the list of suspected minimal polynomials of the corresponding algebraic numbers. Second output is the list of norms of these polynomials evaluated at the corresponding approximate number. The third list contains a list of indices where the given polynomial is likely to be wrong.
+}
+  position:=0;
+  polys:=[];
+  bad:=[];
+  errs:=[RealField(1)|];
+  CC<I>:=Parent(pers[1]);
+  T<t>:=PolynomialRing(Rationals());
+  for p in pers do
+    position +:= 1;
+    print "position: ", position;
+    //print "norm: ", Sqrt(Norm(p));
+    //if position ne 2 then continue; end if;
+    if Norm(p) lt 10^-(precision) then 
+      Append(~polys,T!0);
+      continue;
+    end if;
+    rr:=Sqrt(Norm(p));
+    significand,exponent:=ScientificNotation(rr);
+    r:=CC!(p/(significand*10^exponent));
+    //r:=p/Sqrt(Norm(p));
+    m:=Matrix([[r^i : i in [0..max_order]]]);
+    _,rels:=LatticeOfRelations(m,precision : offset:=Ceiling(precision/10), ForceRelation:=true);
+    _,best_relation_no:=Minimum([Maximum([ j : j in [1..#rels[i]] | rels[i,j] ne 0]) : i in [1..#rels]]);
+    rel:=rels[best_relation_no];
+    pol:=&+[ rel[i]*t^(i-1) : i in [1..#rel]];
+    factors:=[fctr[1] : fctr in Factorization(pol)];
+    evals:=[RealField(1)| Norm(Evaluate(fctr,r)) : fctr in factors];
+    ParallelSort(~evals,~factors);
+    //pol:=Evaluate(factors[1],t*(significand*10^exponent));
+    // clear denominators
+    pol:=Evaluate(factors[1],T.1/(significand*10^exponent));
+    pol:=ClearDenominatorsOfPolynomial(pol);
+    Append(~polys,pol);
+    Append(~errs,Sqrt(Norm(Evaluate(pol,p))));
+    if #rels eq 1 then Append(~bad,position); end if;
+  end for;
+
+  return polys, errs, bad;
+end intrinsic;
 
 
 intrinsic ScientificNotation(r::FldReElt : base:=10) -> RngIntElt, RngIntElt
@@ -1310,7 +1310,7 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 
 end intrinsic;
 
-intrinsic LoadBundle(name::MonStgElt : withPeriods:=false) -> Any
+intrinsic LoadBundle(name::MonStgElt : withPeriods:=true) -> Any
 {
   Reads the "bundle" file written under the storage directory with the given name, construct the corresponding PeriodBundle and returns it.
 }
@@ -1369,19 +1369,21 @@ intrinsic LoadBundle(name::MonStgElt : withPeriods:=false) -> Any
   bundle`deformation :=[poly(cofs[i],exps[i],P) : i in [1..#cofs]];
 
   if withPeriods then 
-    target_is_smooth:=isSmooth(bundle`equation);
     periodsExist:=System("[ -f "*ivpdir*"periods ]") eq 0;
     loopPeriodsExist:=System("[ -f "*ivpdir*"periods1 ]") eq 0;
-    if target_is_smooth and periodsExist then
-      bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
-      bundle:=PrimitiveToComplete(bundle);
-      bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
-    elif (not target_is_smooth) and loopPeriodsExist then
-      bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
-      // precision is worst at the end
-      bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
-      bundle`periods:=loadPeriods(ivpdir*"limit_periods");
-      bundle:=PrimitiveToComplete(bundle);
+    if (periodsExist or loopPeriodsExist) then
+      target_is_smooth:=isSmooth(bundle`equation);
+      if target_is_smooth and periodsExist then
+        bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+        bundle:=PrimitiveToComplete(bundle);
+        bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+      elif (not target_is_smooth) and loopPeriodsExist then
+        bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+        // precision is worst at the end
+        bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+        bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+        bundle:=PrimitiveToComplete(bundle);
+      end if;
     end if;
   end if;
 
