@@ -2221,7 +2221,7 @@ intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
   end for;
 end intrinsic;
 
-intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any) -> Any
+intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any : precision:=0) -> Any
 {
   Computes the periods of given Hodge classes against H^(n/2,n/2). Hodge classes must be given as rows of a matrix, each row representing the coordinates of the Hodge class with respect to the Hodge lattice (X`hodgeLattice`basis).
 }
@@ -2230,10 +2230,15 @@ intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any) -> Any
   // dimensions of filtrations, so that dim H^(n/2,n/2) = dim2-dim1
   dim1:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (X`dimension/2) - X`dimension-2)];
   dim2:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (1+X`dimension/2) - X`dimension-2)];
-  periods:=Matrix(X`periods[(dim1+2)..dim2]);
+  if precision eq 0 then
+    CC<I>:=Parent(X`periods[1,1]);
+    periods:=Matrix(X`periods[(dim1+2)..dim2]);
+  else 
+    CC<I>:=ComplexField(precision);
+    periods:=ChangeRing(Matrix(X`periods[(dim1+2)..dim2]),CC);
+  end if;
   NS:=Matrix(X`hodgeLattice`basis);
-  CC<I>:=Parent(X`periods[1,1]);
-  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeCycles)*NS,CC)*Transpose(X`periods);
+  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeCycles)*NS,CC)*Transpose(ChangeRing(X`periods,CC));
 
 end intrinsic;
 
@@ -2353,4 +2358,60 @@ intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
   print #lines,#quadrics,#twisted_cubics;
 
   return lines, quadrics,twisted_cubics;
+end intrinsic;
+
+
+// Rm x Rn -> R(m+n) -> R(m+n)/Jac(X)
+intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt,n::RngIntElt) -> EltSeq
+{
+  For each monomial of degree m, computes the products with monomials of degree n and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
+}
+  R:=Parent(f);
+  // careful here, I haven't though this through
+  assert (n+m-Ngens(R)) mod Degree(f) eq 0;
+  Rm:=MonomialsOfDegree(R,m);
+  Rn:=MonomialsOfDegree(R,n);
+  prods:=[[ mon1*mon2 : mon2 in Rn] : mon1 in Rm];
+  B:=ComputeCohomologyBasis(f : order:="grevlex"); 
+  // M[i] will be a matrix whose *rows* correspond to coordinates of entries in prods wrt B
+  return [CoordinatesInCohomology(f,B,prod) : prod in prods];
+end intrinsic;
+
+intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt) -> EltSeq
+{
+  For each monomial of degree m, computes the products with monomials of complimentary degree and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
+}
+  d:=Degree(f);
+  n:=Ceiling((m+Ngens(Parent(f)))/d)*d-(m+Ngens(Parent(f)));
+  return MultiplyAndReduce(f,m,n);
+end intrinsic;
+
+intrinsic PolynomialsVanishingOnHodgeCycle(X::Rec, hodgeCycle::Any, degree::RngIntElt : working_precision:=Ceiling(X`precision*0.8)) -> Any
+{
+  Takes as input a Period bundle X, a Hodge cycle represented in the coordinates of the Hodge lattice of X, and the desired degree of polynomials "vanishing" on this Hodge cycle.
+}
+  precision:=Minimum(X`precision,2*working_precision);
+  P:=PeriodsOfHodgeCycles(X,hodgeCycle : precision:=precision);
+  M:=MultiplyAndReduce(X`equation,degree);
+  PM:=Matrix([P * ChangeRing(Transpose(m),ComplexField(precision)) : m in M]);
+  // at this point we've lost some precision so use fewer precision
+  epsilon:=10^-(Floor(working_precision*0.9));
+  cleanPM:=Matrix(Nrows(PM),Ncols(PM),[ComplexField(working_precision)| Abs(e) lt epsilon select 0 else e  : e in Eltseq(PM) ]);
+  K:=Kernel(cleanPM); 
+  dimK:=Dimension(K);
+  print "There are "*Sprint(dimK)*" equations of degree "*Sprint(degree)*" vanishing on this cycle.";
+  return [HomogenizeCoordinate(Eltseq(k),working_precision) : k in Basis(K)];
+end intrinsic;
+
+
+intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
+{
+  Given a sequence of values over a non-exact real or complex field, scale the sequence so that the first non-zero coordinate is one. An element is considered zero if it is indistinguishable from zero according to our precision.
+}
+  i:=0;
+  repeat
+    i+:=1;
+    if i gt #point then return [Parent(point[1])|0 : i in [1..#point]]; end if;
+  until Abs(point[i]) gt 10^-(Floor(precision/2));
+  return [p/point[i] : p in point];
 end intrinsic;
