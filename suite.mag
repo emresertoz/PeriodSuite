@@ -1152,6 +1152,24 @@ end intrinsic;
 // monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
 PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol, name>;
 
+intrinsic DimensionOfMiddleCohomology(dim::RngIntElt,deg::RngIntElt) -> RngIntElt
+{
+  The dimension of the middle cohomology H^dim of a smooth hypersurface of degree "deg" and dimension "dim".
+}
+  return  &+[(-1)^i*Binomial(dim+2,i)*deg^(dim+1-i) : i in [0..dim]] + (-1)^(dim+1)*2*Floor(dim/2);
+end intrinsic;
+
+intrinsic HasAllPeriods(X::Rec) -> BoolElt
+{
+  Checks if the complete period matrix for X has been computed.
+}
+  if (X`dimension mod 2) eq 0 then
+    return Ncols(X`periods) eq (Nrows(X`periods)+1);
+  else 
+    return Ncols(X`periods) eq Nrows(X`periods);
+  end if;
+end intrinsic;
+
 intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
 
@@ -2227,15 +2245,13 @@ intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any : precision:=0) -> Any
 }
 
   assert (X`dimension mod 2) eq 0;
+  assert HasAllPeriods(X);
+
   // dimensions of filtrations, so that dim H^(n/2,n/2) = dim2-dim1
-  dim1:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (X`dimension/2) - X`dimension-2)];
-  dim2:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * (1+X`dimension/2) - X`dimension-2)];
   if precision eq 0 then
     CC<I>:=Parent(X`periods[1,1]);
-    periods:=Matrix(X`periods[(dim1+2)..dim2]);
   else 
     CC<I>:=ComplexField(precision);
-    periods:=ChangeRing(Matrix(X`periods[(dim1+2)..dim2]),CC);
   end if;
   NS:=Matrix(X`hodgeLattice`basis);
   return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeCycles)*NS,CC)*Transpose(ChangeRing(X`periods,CC));
