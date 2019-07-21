@@ -8,27 +8,41 @@ intrinsic PathToSuite() -> MonStgElt
 end intrinsic;
 
 
-intrinsic PeriodSuiteStorageDir() -> MonStgElt
+intrinsic PeriodSuiteStorageDir(:subfolder:="") -> MonStgElt
+{
+ Returns the directory for intermediate computational results that may be reused. 
+}
+  if #subfolder eq 0 then
+    return PathToSuite()*"fermat_data/";
+  else
+    return PathToSuite()*"fermat_data/"*subfolder*"/";
+  end if;
+end intrinsic;
+
+intrinsic PeriodSuiteTempDir(:subfolder:="") -> MonStgElt
 {
  Returns the directory for temp files of period-suite. 
 }
-  return PathToSuite()*"freezer/";
+  if #subfolder eq 0 then
+    return PathToSuite()*"ode_storage/incinerator/";
+  else 
+    return PathToSuite()*"ode_storage/"*subfolder*"/";
+  end if;
 end intrinsic;
 
-intrinsic PeriodSuiteTempDir() -> MonStgElt
-{
- Returns the directory for temp files of period-suite. 
-}
-  return PathToSuite()*"incinerator/";
-end intrinsic;
-
-intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false)
+intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwrite:=false, name:="",createFolder:=false)
 {
   Writes the string to filename inside the appropriate folder within period-suite. Takes care of line breaking issues.
 }
   cols := GetColumns();
-  target:=PeriodSuiteTempDir()*filename;
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  target:=ivpdir*filename;
   SetColumns(0);
+  if (#name gt 0) and createFolder then
+    if System("[ -d "*ivpdir*" ]") gt 0 then
+      System("mkdir "*ivpdir);
+    end if;
+  end if;
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
 end intrinsic;
@@ -581,6 +595,13 @@ intrinsic Analytics(ODEs::[RngUPolElt]) -> SeqEnum
   return pairs;
 end intrinsic;
 
+intrinsic Analytics(ODEs::SeqEnum) -> SeqEnum
+{
+  Takes a nested list of ODEs and returns the nested list of [order,degree] pairs.
+}
+  return [Analytics(odes) : odes in ODEs];
+end intrinsic;
+
 // initial value problems
 IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
 
@@ -627,6 +648,7 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
 
   // setting up integration paths, unless specified
   avoid:=[];
+  loop_position:=-1;
   if #integrationPath eq 0 then
     // we will use the pathfinder algorithm specified by the integer pathfinder
     integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder : f1_is_smooth:=f1_is_smooth);
@@ -641,7 +663,7 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
 end intrinsic;
 
 
-intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_bound:=0, family_number:=0, max_number:=0, pathfinder:=0, integrationPath:=[])  -> Any
+intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_bound:=0, family_number:=0, max_number:=0, pathfinder:=0, integrationPath:=[], name:="")  -> Any
 {
   Computes the Picard Fuchs equations for each of a convenient base of forms over the family (1-t)*f0+t*f1. The initial conditions are expressed in the grevlex cohomology basis of f0. Writes to file everything needed to start integrating these initial value problems.
 }
@@ -668,11 +690,11 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
     L:=ComputeDerivatives(B[i],f0,f1,requiredDerivatives : withFactorial:=true);
     init:=CoordinatesInReducedCohomologyBasis(f0,A0,L);
     ode_filename:="IVP-"*suffix(family_number,max_number)*"-"*suffix(i,#ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(ODEs[i]) : Overwrite:=true);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(init));
-    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision));
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath));
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(family_number)*","*Sprint(i)*")");
+    WriteInsideTempFolder(ode_filename,"ode="*Sprint(ODEs[i]) : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename,"init="*Sprint(init):name:=name);
+    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=name);
+    WriteInsideTempFolder(ode_filename,"label=("*Sprint(family_number)*","*Sprint(i)*")":name:=name);
   end for;
   
   filename:="BaseChange-"*suffix(family_number,max_number)*".sage"; 
@@ -681,10 +703,10 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
     A1:=ComputeCohomologyBasis(f1 : order:="grevlex"); 
     // the following matrix computes the matrix whose rows store the coordinates of entries in A1 in terms of the basis B 
     M:=CoordinatesInCohomology(f1,B,A1);
-    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(#B)*","*Sprint(Eltseq(M))*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(#B)*","*Sprint(Eltseq(M))*")" : Overwrite:=true,name:=name);
   else 
     // we don't have to change coordinates to a standard basis because this clause can be activated only if we are at the final hypersurface
-    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(#B)*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(#B)*")" : Overwrite:=true,name:=name);
   end if;
 
   return B;
@@ -939,7 +961,7 @@ end intrinsic;
 // the orthogonal complement of the polarization is assumed negative definite
 intrinsic LatticeElementsOfNormAndDegree(lattice::AlgMatElt,polarization::ModMatRngElt,N::RngIntElt,d1::RngIntElt,d2::RngIntElt) -> Any
 {
- lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of rho is assumed to be negative definite. For an elemend D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
+ lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of polarization is assumed to be negative definite. For an elemend D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
 }
 
   // rank of lattice
@@ -1007,7 +1029,7 @@ intrinsic MinimalPolynomials(pers::SeqEnum : precision:=500, max_order:=30) -> A
   for p in pers do
     position +:= 1;
     print "position: ", position;
-    print "norm: ", Sqrt(Norm(p));
+    //print "norm: ", Sqrt(Norm(p));
     //if position ne 2 then continue; end if;
     if Norm(p) lt 10^-(precision) then 
       Append(~polys,T!0);
@@ -1076,7 +1098,7 @@ intrinsic suffix(number::RngIntElt,  max_number::RngIntElt) -> MonStgElt
   return Sprint(10^digits+number)[2..(digits+1)];
 end intrinsic;
 
-intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0)
+intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
 {
   Writes the output of ConstructIVPs in a format readable by Sage.
 }
@@ -1085,27 +1107,27 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0)
   M:=E`changeBasis;
   nrows:=Nrows(M);
   if IsIdentity(M) then
-    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(nrows)*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=identity_matrix("*Sprint(nrows)*")" : Overwrite:=true,name:=name);
   else
-    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(nrows)*","*Sprint(Eltseq(M))*")" : Overwrite:=true);
+    WriteInsideTempFolder(filename,"change_coordinates=Matrix("*Sprint(nrows)*","*Sprint(Eltseq(M))*")" : Overwrite:=true,name:=name);
   end if;
-  //WriteInsideTempFolder(filename,"singularities="*Sprint(E`pointsToAvoid));
+  //WriteInsideTempFolder(filename,"singularities="*Sprint(E`pointsToAvoid):name:=name);
   
   for i in [1..#E`ODEs] do
     ode_filename:="IVP-"*suffix(number,max_number)*"-"*suffix(i,#E`ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]));
-    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision));
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath));
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")");
-    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position));
+    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]):name:=name);
+    //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath):name:=name);
+    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")":name:=name);
+    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position):name:=name);
   end for;
 
   // not required
   //filename2:="IVPs-meta-"*suffix;
-  //WriteInsideTempFolder(filename2, Sprint(E`t) : Overwrite:=true);
-  //WriteInsideTempFolder(filename2, Sprint(E`analytics));
-  //WriteInsideTempFolder(filename2,"movingBasis="*Sprint(E`movingBasis));
+  //WriteInsideTempFolder(filename2, Sprint(E`t) : Overwrite:=true,name:=name);
+  //WriteInsideTempFolder(filename2, Sprint(E`analytics):name:=name);
+  //WriteInsideTempFolder(filename2,"movingBasis="*Sprint(E`movingBasis):name:=name);
 
 end intrinsic;
 
@@ -1128,9 +1150,27 @@ end intrinsic;
 // loopBegins,loopEnds: the periods of a hypersurface near the singular target hypersurface, before and after a looping around the target
 // primitiveToComplete: transition matrix for converting primitive periods to complete periods
 // monodromy: if bundle is obtained from a singular target, this will store the monodromy operator of going around the singular fiber in the last family.
-PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol>;
+PeriodBundle := recformat<equation,degree,dimension,primitivePeriods, periods,loopBegins,loopEnds, phamBasis, cohomBasis,primitiveToComplete,primitiveIntersectionMatrix,intersectionMatrix,monodromy,precision,odes,deformation,hodgeLattice,polarization, lat,pol, name>;
 
-intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true) -> Any
+intrinsic DimensionOfMiddleCohomology(dim::RngIntElt,deg::RngIntElt) -> RngIntElt
+{
+  The dimension of the middle cohomology H^dim of a smooth hypersurface of degree "deg" and dimension "dim".
+}
+  return  &+[(-1)^i*Binomial(dim+2,i)*deg^(dim+1-i) : i in [0..dim]] + (-1)^(dim+1)*2*Floor(dim/2);
+end intrinsic;
+
+intrinsic HasAllPeriods(X::Rec) -> BoolElt
+{
+  Checks if the complete period matrix for X has been computed.
+}
+  if (X`dimension mod 2) eq 0 then
+    return Ncols(X`periods) eq (Nrows(X`periods)+1);
+  else 
+    return Ncols(X`periods) eq Nrows(X`periods);
+  end if;
+end intrinsic;
+
+intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
 
   if straight then
@@ -1139,23 +1179,39 @@ intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_
     path:=BreakingPath(f : randomize:=randomizePath); 
   end if;
 
-  return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials);
+  return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite, integrate:=integrate);
 end intrinsic;
 
-intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true) -> Any
+intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
 {
   Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
 }
 
-  if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials); end if;
+  if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
+
+  if not IsFermat(path[1]) then
+    error "The initial polynomial is not of fermat type." ;
+  end if;
 
   beginningTime:=Realtime();
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+  // check if ivpdir exists
+  if System("[ -d "*ivpdir*" ]") eq 0 then
+    if overwrite then
+      System("rm -fr "*ivpdir*"*");
+    else
+      error "folder name already exists, change 'name' or set 'overwrite:=true'";
+    end if;
+  else 
+    System("mkdir "*ivpdir);
+  end if;
 
-  System("rm -fr "*PeriodSuiteTempDir()*"/*");
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision));
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])));
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])));
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials));
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1172,6 +1228,8 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
+  // but we can only bound pole order, if there is non-zero classes outside of H^{n/2,n/2}
+  if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
   pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
 
   allODEs:=[];
@@ -1188,58 +1246,230 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
       ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision, f1_is_smooth:=f1_is_smooth);
       Append(~allODEs,ivps`ODEs);
 
-      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1);
+      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1, name:=name);
     // to parallelize one could start integration at this point, or even sooner for each IVP
   end for;
-  printf "\n\nComputation of the differential equations is now complete (%o seconds). Starting integration.\n\n", Realtime()-tstart;
 
-  print "If this is the first time, we will compute a Pham basis for the Fermat hypersurface of degree", d, "and dimension", n;
+  print "\n\nIf this is the first time, we will compute a Pham basis for the Fermat hypersurface of degree", d, "and dimension", n;
   // intmat is not urgent, but phamB is recorded for sage to use
   phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
-
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-  /// Integration happens here ///////////
-  System("$(which sage) "*PathToSuite()*"integrator.sage");
-  ////////////////////////////////////////
-
   // define a period bundle
   bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
   odes:=allODEs,
-  deformation:=path, cohomBasis:=ivps`movingBasis>;
+  deformation:=path, cohomBasis:=ivps`movingBasis,
+  name:=name
+  >;
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
 
-  if target_is_smooth then
-    bundle`primitivePeriods,bundle`precision:=loadPeriods("periods");
-    bundle:=PrimitiveToComplete(bundle);
-    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
-  else
-    bundle`loopBegins:=loadPeriods("periods1");
-    // precision is worst at the end
-    bundle`loopEnds,bundle`precision:=loadPeriods("periods2");
-    bundle`periods:=loadPeriods("limit_periods");
-    bundle:=PrimitiveToComplete(bundle);
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  if integrate then
+    print "Starting integration.\n\n";
+    bundle:=SolveIVPs(bundle);
   end if;
+  ////////////////////////////////////////
+  ////////////////////////////////////////
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
 
-  print "Period homotopy is completed in", Realtime()-beginningTime, "seconds.";
+  if #name gt 0 then SaveBundle(bundle); end if;
+
+  return bundle, ivpdir;
+end intrinsic;
+
+
+intrinsic SolveIVPs(name::MonStgElt) -> Any
+{
+  Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
+}
+
+  bundle:=LoadBundle(name : withPeriods:=false);
+
+  return SolveIVPs(bundle);
+
+end intrinsic;
+
+intrinsic SolveIVPs(bundle::Any) -> Any
+{
+  Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
+}
+  name:=bundle`name;
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  cols := GetColumns();
+  SetColumns(0);
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+  SetColumns(cols);
+  System("$(which sage) "*PathToSuite()*"integrator.sage");
+
+  if isSmooth(bundle`equation) then
+    bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+    bundle:=PrimitiveToComplete(bundle);
+    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+  else
+    bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+    // precision is worst at the end
+    bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+    bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+    bundle:=PrimitiveToComplete(bundle);
+  end if;
+
   print "The periods are correct to "*Sprint(bundle`precision)*" digits.";
   if bundle`precision lt 20 then
     print "Low precision is often caused by poor *integration* paths. Try the computation again or input your own integration paths for better results.";
   end if;
 
   return bundle;
+
+end intrinsic;
+
+intrinsic LoadBundle(name::MonStgElt : withPeriods:=true) -> Any
+{
+  Reads the "bundle" file written under the storage directory with the given name, construct the corresponding PeriodBundle and returns it.
+}
+
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  filename:=ivpdir*"bundle";
+  file:=Open(filename,"r");
+  bundle:=rec<PeriodBundle | name:=name >;
+  poly:=func<cofs,exps,polyring | &+[ cofs[i]*Monomial(polyring,exps[i]) : i in [1..#cofs]]>;
+  field:=eval(Gets(file));
+  N:=eval(Gets(file));
+  varnames:=eval(Gets(file));
+  P:=PolynomialRing(field,N);
+  AssignNames(~P,varnames);
+  cofs:=eval(Gets(file));
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`equation:=poly(cofs,exps,P);
+  bundle`degree :=Degree(bundle`equation);
+  bundle`dimension :=N-2;
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  cofs:=eval(str);
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`cohomBasis :=[poly(cofs[i],exps[i],P) : i in [1..#cofs]];
+  phamB,intmat:=WriteToFileHomAndCohOfFermat(bundle`dimension,bundle`degree);
+  bundle`phamBasis:=phamB; bundle`primitiveIntersectionMatrix:=Matrix(intmat);
+
+  K<t>:=FunctionField(field);
+  RR<D>:=PolynomialRing(K); 
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  bundle`odes:=eval(str);
+
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  cofs:=eval(str);
+  str:="";
+  for i in [1..eval(Gets(file))] do
+    str *:= Gets(file);
+  end for;
+  exps:=eval(str);
+  bundle`deformation :=[poly(cofs[i],exps[i],P) : i in [1..#cofs]];
+
+  if withPeriods then 
+    periodsExist:=System("[ -f "*ivpdir*"periods ]") eq 0;
+    loopPeriodsExist:=System("[ -f "*ivpdir*"periods1 ]") eq 0;
+    if (periodsExist or loopPeriodsExist) then
+      target_is_smooth:=isSmooth(bundle`equation);
+      if target_is_smooth and periodsExist then
+        bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
+        bundle:=PrimitiveToComplete(bundle);
+        bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
+      elif (not target_is_smooth) and loopPeriodsExist then
+        bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
+        // precision is worst at the end
+        bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
+        bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+        bundle:=PrimitiveToComplete(bundle);
+      end if;
+    end if;
+  end if;
+
+  return bundle;
+
+end intrinsic;
+
+
+intrinsic SaveBundle(periodBundle::Any, name::MonStgElt)
+{
+  Saves the state of a period bundle prior to the integration of IVPs into the storage directory into the folder "name".
+}
+  periodBundle`name:=name;
+  SaveBundle(periodBundle);
+end intrinsic;
+
+intrinsic SaveBundle(periodBundle::Any)
+{
+  Saves the state of a period bundle prior to the integration of IVPs into the storage directory into a folder named after the name of the bundle (bundle`name).
+}
+// if folder does not exist, creates it
+// if the file inside exists, overwrites it
+  cols:=GetColumns();
+  SetColumns(0);
+  X:=periodBundle;
+  name:=X`name;
+  P:=Parent(X`equation); varnames:=Names(P);
+  N:=Ngens(P); field:=CoefficientRing(P);
+  str:="";
+
+  // do not change the order, unless you also change LoadBundle
+  // better would have been to have a uniform way to write things to file
+  // as in to say "how many lines are to be read to constitute one input"
+  // and then the input
+  // we do this below only where necessary
+
+  str *:=Sprint(field,"Magma")*"\n";
+  str *:=Sprint(N)*"\n";
+  str *:=Sprint(varnames,"Magma")*"\n";
+  cofs,mons:=CoefficientsAndMonomials(X`equation);
+  exps:=[Exponents(m) : m in mons];
+  str *:=Sprint(cofs,"Magma")*"\n";
+  str *:=Sprint(#exps+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+  cofs:=[Coefficients(omega) : omega in X`cohomBasis];
+  exps:=[[Exponents(m) : m in Monomials(omega)] : omega in X`cohomBasis];
+  str *:= Sprint(#cofs+2)*"\n";
+  str *:=Sprint(cofs , "Magma")*"\n";
+  str *:= Sprint(&+[#e+2 : e in exps]+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+  str *:=Sprint(&+[#odes+2 : odes in X`odes]+2)*"\n";
+  str *:=Sprint(X`odes)*"\n";
+  cofs:=[Coefficients(p) : p in X`deformation];
+  exps:=[[Exponents(m) : m in Monomials(p)] : p in X`deformation];
+  str *:= Sprint(#cofs+2)*"\n";
+  str *:=Sprint(cofs , "Magma")*"\n";
+  str *:= Sprint(&+[#e+2 : e in exps]+2)*"\n";
+  str *:=Sprint(exps)*"\n";
+
+  WriteInsideTempFolder("bundle",str : name:=name, Overwrite:=true, createFolder:=true);
+  SetColumns(cols);
 end intrinsic;
 
 intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
 {
   Parses the output of integration.
 }
-  file:=Open(PeriodSuiteTempDir()*filename,"r");
+  file:=Open(filename,"r");
   s:=Gets(file);
   precision:=eval s;
   s:=Gets(file);
@@ -1371,8 +1601,7 @@ Computes a sequence of rectilinear paths in the complex plane avoiding any singu
     avoidPoints:=planeToComplex(avoid);
     loop_position:=-1;
   else 
-    PathFinder:=FormLoop;
-    path,avoid,loop_position:=PathFinder(f0,f1);
+    path,avoid,loop_position:=FormLoop(f0,f1 : pathfinder:=pathfinder);
     avoidPoints:=avoid;
   end if;
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
@@ -1456,15 +1685,13 @@ end intrinsic;
 
 // avoid is a sequence of points in a 2 dimensional real vector space
 // maxsteps is the number of steps in the rectilinear path
-// output is a rectilinear path from 0 to 1 avoiding the list of points as much as possible
+// output is a rectilinear path from p0 to p1 avoiding the list of points as much as possible
 // N and n control the evolutionary algorithm, N=sample size, n=survivors from each generation
-intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
+intrinsic findPath(avoid::[ModTupFldElt],p0::ModTupFldElt,p1::ModTupFldElt : maxSteps:=5, n:=5,N:=100) -> Any,Any
 {
-  Uses an evolutionary algorithm to find a rectilinear path from 0 to 1 in the real plane avoiding the points in the list "avoid".
+  Uses an evolutionary algorithm to find a rectilinear path from p0 to p1 in the real plane avoiding the points in the list "avoid".
 }
-  V:=VectorSpace(RealField(20),2);
-  p0:=V!0;
-  p1:=V![1,0];
+  V:=Parent(p0); // the real plane, i.e. a vector space of dim 2 over a real field
   avoid:=[a : a in avoid | not ((a eq p0) or (a eq p1))];
 
   if #avoid eq 0 then 
@@ -1516,6 +1743,19 @@ intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
   ParallelSort(~weights,~bestPaths);
 
   return bestPaths[1], weights[1];
+end intrinsic;
+
+intrinsic findPath(avoid::[ModTupFldElt] : maxSteps:=5, n:=5,N:=100) -> Any,Any
+{
+  Uses an evolutionary algorithm to find a rectilinear path from 0 to 1 in the real plane avoiding the points in the list "avoid".
+}
+  if #avoid eq 0 then
+    V:=VectorSpace(RealField(20),2);
+  else 
+    V:=Parent(avoid[1]);
+  end if;
+  p0:=V!0; p1:=V![1,0];
+  return findPath(avoid,p0,p1 : maxSteps:=maxSteps, n:=n,N:=n);
 end intrinsic;
 
 
@@ -1575,7 +1815,7 @@ intrinsic addSegment(path::[ModTupFldElt],newPoint::ModTupFldElt,avoid::[ModTupF
   return Append(path,newPoint),wt,problem;
 end intrinsic;
 
-intrinsic test() -> Rec
+intrinsic test( : name:="") -> Rec
 { Try a simple polynomial with PeriodHomotopy. }
   P3<x,y,z,w>:=PolynomialRing(Rationals(),4);
   path:=[
@@ -1584,7 +1824,7 @@ intrinsic test() -> Rec
   4*x^4 - 6*x*w^3 + 2*y^4 - 6*z^4,
   4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4
   ];
-  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0);
+  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0,name:=name, overwrite:=true);
   //f:=4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4;
   //PeriodHomotopy(f : pathfinder:=1);
 end intrinsic;
@@ -1707,12 +1947,17 @@ end intrinsic;
 hodgeLattice := recformat<rank,lattice,basis,polarization,degrees,parameters>;
 
 
-intrinsic HodgeLattice(X::Rec : offset:=20) -> Rec
+intrinsic HodgeLattice(X::Rec : offset:=20 , precision:=X`precision) -> Rec
 {
   Takes the output of PeriodHomotopy and computes the lattice of Hodge cycles of middle dimension for the target hypersurface.
 }
 
-  rho,basis:=LatticeOfRelations(X`periods,X`precision: offset:=offset);
+  assert X`dimension mod 2 eq 0;
+  // the dimension of F^(n/2+1)
+  dim:=#[ omega  : omega in X`cohomBasis | Degree(omega) eq (X`degree * X`dimension/2 - X`dimension-2)];
+   // Binomial(Ceiling(X`dimension/2)*X`degree,X`dimension+2);
+  // in case full matrix of periods are computed, we use only half
+  rho,basis:=LatticeOfRelations(Matrix(X`periods[1..dim]),precision: offset:=offset);
 
   IM:=X`intersectionMatrix;
   hyp:=X`polarization;
@@ -1786,7 +2031,7 @@ intrinsic CoordinatesInReducedCohomologyBasis(f::RngMPolElt,basis::[RngMPolElt],
   return [Coordinates(W,W!b) : b in rb2];
 end intrinsic;
 
-intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
+intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt : pathfinder:=0) -> SeqEnum
 {
   Computes a path which goes from f0 to some g near f1 and loops counterclockwise around f1 back to g. This loop contains no other singular hypersurfaces except f1, which is assumed to be singular.
 }
@@ -1800,11 +2045,18 @@ intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   V:=VectorSpace(RealField(20),2);
   loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
   // in future, this should be combined with path finder
-  path_before_loop_head:=[V!0];
+  // remove 1 from the set of singularities and cast complex points to real plane
+  if pathfinder eq 1 then
+    avoid:=complexToPlane(Remove(sings,Index(sings,1)));
+  else 
+    avoid:=[];
+  end if;
+  path_before_loop_head:=findPath(avoid,V!0,loop_head[1]);
   path_end:=[V![1,0]];
+  path:=path_before_loop_head cat loop_head[[2,3,4,5]] cat path_end;
 
   // third entry records the position of the loop head
-  return path_before_loop_head cat loop_head cat path_end, sings, #path_before_loop_head+1;
+  return path, avoid, #path_before_loop_head;
 end intrinsic;
 
 
@@ -1893,7 +2145,7 @@ intrinsic LogarithmOfMonodromy(T::AlgMatElt) -> AlgMatElt,RngIntElt
   return 1/lcm*&+[(-1)^(m+1)/m*(T^lcm-1)^m : m in [1..(unipotency-1)]],unipotency,lcm;
 end intrinsic;
 
-// WARNING: N acts on the right
+// WARNING: N acts by right multiplication
 intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false) -> AlgMatElt,SeqEnum
 {
   Computes the weight filtration induced by the nilpotent operator N.
@@ -1905,7 +2157,7 @@ intrinsic WeightFiltration(N::AlgMatElt, orderOfN::RngIntElt : transpose:=false)
   V:=VectorSpace(Rationals(),n);
   k:=orderOfN-1;
   assert N^(k+1) eq 0;
-  // indeces will be shifted by -2
+  // indices will be shifted by -2
   // filtration[i] = W_(i-2)
   filtration:=[]; 
   filtration[2*k+2]:=V; // 2k
@@ -1972,4 +2224,210 @@ intrinsic DifferentiateCohomology(f0::RngMPolElt,f1::RngMPolElt) -> SeqEnum
   return CoordinatesInCohomology(f0,B,[DifferentiateForm(q,f0,f1) : q in B]);
 end intrinsic;
 
+intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
+{
+  Changes the integration paths for the deformation family that is specified by the given number.
+}
+  number:=family_number;
+  def:=X`deformation;
+  odes:=X`odes[number];
+  f0:=def[number]; f1:=def[number+1];
+  integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder);
+  for i in [1..#odes] do
+    ode_filename:="IVP-"*suffix(number,#def-1)*"-"*suffix(i,#odes)*".sage";
+    WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=X`name);
+  end for;
+end intrinsic;
 
+intrinsic PeriodsOfHodgeCycles(X::Rec,hodgeCycles::Any : precision:=0) -> Any
+{
+  Computes the periods of given Hodge classes against H^(n/2,n/2). Hodge classes must be given as rows of a matrix, each row representing the coordinates of the Hodge class with respect to the Hodge lattice (X`hodgeLattice`basis).
+}
+
+  assert (X`dimension mod 2) eq 0;
+  assert HasAllPeriods(X);
+
+  // dimensions of filtrations, so that dim H^(n/2,n/2) = dim2-dim1
+  if precision eq 0 then
+    CC<I>:=Parent(X`periods[1,1]);
+  else 
+    CC<I>:=ComplexField(precision);
+  end if;
+  NS:=Matrix(X`hodgeLattice`basis);
+  return 1/(2*Pi(CC)*I)*ChangeRing(Matrix(hodgeCycles)*NS,CC)*Transpose(ChangeRing(X`periods,CC));
+
+end intrinsic;
+
+intrinsic round(matrix ::ModMatFldElt : dec:=5) -> Any
+{
+  Given a matrix with floating point entries, rounds each entry to "dec" number of decimal points.
+}
+  return Matrix(Nrows(matrix),Ncols(matrix),[ComplexField(dec)| (Abs(e) lt 10^-dec) select 0 else e : e in Eltseq(matrix)]);
+end intrinsic;
+
+
+// lattice is a matrix representing the intersection product on the picard group of a k3 surface
+// polarization is the coordinates of a very ample line bundle in the picard group
+// degree is the maximal degree of rational curves which will be computed
+intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
+{
+  Computes the smooth rational curves inside the Picard lattice of a K3 surface. (Currently implemented only upto degree three.)
+}
+
+  if not degree eq 3 then return Error("Not implemented"); end if;
+
+  // rank of lattice
+  rho:=Ncols(lattice);
+  //basis
+  id:=IdentityMatrix(Integers(),rho);
+  // degree of polarization 
+  d:=norm(polarization,lattice);
+
+  // projection map (scaled by d)
+  // d*id - lattice*polarization
+  proj:=Matrix([ d*e - inner(e,lattice,polarization)*polarization[1] : e in Rows(id) ]);
+  basis:=Matrix(Basis(RowSpace(proj)));
+  prim:=-basis*lattice*Transpose(basis);
+  gcd:=GCD(Eltseq(prim));
+  primReduced:=Matrix(rho-1,rho-1, [Integers()|p/gcd : p in Eltseq(prim)]);
+  L:=Lattice(IdentityMatrix(Integers(),Nrows(basis)),primReduced);
+
+
+  // find potential rational curves
+  // you could do better here -- just compute all weights in a range?
+  all_curves:=[**];
+  for i in [1..degree] do
+    // norm of the projection of a rational curve of degree i is kappa[i]
+    kappa:=(d*(2*d+i^2)/gcd); 
+    if IsIntegral(kappa) then
+      kappa:= Integers()!kappa;
+      sv:=ShortVectors(L,kappa,kappa);
+    else
+      sv:=[];
+    end if;
+    // add or subtract polarization
+    candidates:=[ Matrix(s[1])*basis + i*polarization: s in sv] cat [ Matrix(s[1])*basis - i*polarization : s in sv];
+    // check the ones that would be integral even after dividing by d
+    divisible:=[ Vector(l) : l in candidates | GCD(Eltseq(l)) mod d eq 0 ];
+    // now fix the signs of non-effective classes
+    finalists:=[];
+    for l in divisible do
+      if inner(l,lattice,polarization) gt 0 then
+        Append(~finalists,l);
+      else
+        Append(~finalists,-l);
+      end if;
+    end for;
+
+    // in case of duplicates, we trim them
+    trim:=Seqset(finalists);
+
+    // now divide 
+    curves:=[ Vector([Integers()!(e/d) : e in Eltseq(l) ])  : l in trim];
+    Append(~all_curves,curves);
+  end for;
+
+    // this could be automated for arbitrary degrees, but the fast version is here
+  lines:=all_curves[1];
+
+  if #lines eq 0 then
+    quadrics:=all_curves[2];
+    twisted_cubics:=all_curves[3];
+  else
+    linePairing:=Matrix(lines)*lattice*Transpose(Matrix(lines));
+    // i1,i2 indicies of two lines in lines
+    function lines_intersect(i1,i2)
+      return linePairing[i1,i2] eq 1;
+    end function;
+
+    print "planar pairs";
+    planar_pairs:={lines[i]+lines[j] : i,j in [1..#lines] | lines_intersect(i,j)};
+
+    quadrics:=Setseq({ q : q in all_curves[2] | not q in planar_pairs});
+
+    degenerate_cubics1:=[];
+    for i in [1..#lines] do
+      // find triplets i,j,k such that li intersects lj and lk but lj does not intersect lk
+      // as i is distinguished here, we put that first, but j and k are not distinguished so
+      // we order according to magnitude, so the triplets [i,j < k] are unique
+      // we retain the sum li+lj+lk
+      degenerate_cubics1 cat:=[&+lines[[i,j,k]] : j,k in [1..#lines]| j lt k and lines_intersect(i,j) and lines_intersect(i,k) and (not lines_intersect(j,k))];
+    end for;
+
+    if #quadrics eq 0 then
+      degenerate_cubics2:=[];
+    else
+      line_cap_quadric:=Matrix(lines)*lattice*Transpose(Matrix(quadrics));
+      degenerate_cubics2:=[ lines[i]+quadrics[j] : i in [1..#lines], j in [1..#quadrics] | line_cap_quadric[i,j] eq 1 ];
+    end if;
+
+    degenerate_cubics:=Seqset(degenerate_cubics1 cat degenerate_cubics2);
+    twisted_cubics:=Setseq(Seqset(all_curves[3]) diff degenerate_cubics);
+
+  end if;
+
+
+  // if degree is greater than 3 then use the following... not implemented yet
+  
+
+  print "The number of lines, quadrics, twisted cubics:";
+  print #lines,#quadrics,#twisted_cubics;
+
+  return lines, quadrics,twisted_cubics;
+end intrinsic;
+
+
+// Rm x Rn -> R(m+n) -> R(m+n)/Jac(X)
+intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt,n::RngIntElt) -> EltSeq
+{
+  For each monomial of degree m, computes the products with monomials of degree n and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
+}
+  R:=Parent(f);
+  // careful here, I haven't though this through
+  assert (n+m-Ngens(R)) mod Degree(f) eq 0;
+  Rm:=MonomialsOfDegree(R,m);
+  Rn:=MonomialsOfDegree(R,n);
+  prods:=[[ mon1*mon2 : mon2 in Rn] : mon1 in Rm];
+  B:=ComputeCohomologyBasis(f : order:="grevlex"); 
+  // M[i] will be a matrix whose *rows* correspond to coordinates of entries in prods wrt B
+  return [CoordinatesInCohomology(f,B,prod) : prod in prods];
+end intrinsic;
+
+intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt) -> EltSeq
+{
+  For each monomial of degree m, computes the products with monomials of complimentary degree and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
+}
+  d:=Degree(f);
+  n:=Ceiling((m+Ngens(Parent(f)))/d)*d-(m+Ngens(Parent(f)));
+  return MultiplyAndReduce(f,m,n);
+end intrinsic;
+
+intrinsic PolynomialsVanishingOnHodgeCycle(X::Rec, hodgeCycle::Any, degree::RngIntElt : working_precision:=Ceiling(X`precision*0.8)) -> Any
+{
+  Takes as input a Period bundle X, a Hodge cycle represented in the coordinates of the Hodge lattice of X, and the desired degree of polynomials "vanishing" on this Hodge cycle.
+}
+  precision:=Minimum(X`precision,2*working_precision);
+  P:=PeriodsOfHodgeCycles(X,hodgeCycle : precision:=precision);
+  M:=MultiplyAndReduce(X`equation,degree);
+  PM:=Matrix([P * ChangeRing(Transpose(m),ComplexField(precision)) : m in M]);
+  // at this point we've lost some precision so use fewer precision
+  epsilon:=10^-(Floor(working_precision*0.9));
+  cleanPM:=Matrix(Nrows(PM),Ncols(PM),[ComplexField(working_precision)| Abs(e) lt epsilon select 0 else e  : e in Eltseq(PM) ]);
+  K:=Kernel(cleanPM); 
+  dimK:=Dimension(K);
+  print "There are "*Sprint(dimK)*" equations of degree "*Sprint(degree)*" vanishing on this cycle.";
+  return [HomogenizeCoordinate(Eltseq(k),working_precision) : k in Basis(K)];
+end intrinsic;
+
+
+intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
+{
+  Given a sequence of values over a non-exact real or complex field, scale the sequence so that the first non-zero coordinate is one. An element is considered zero if it is indistinguishable from zero according to our precision.
+}
+  i:=0;
+  repeat
+    i+:=1;
+    if i gt #point then return [Parent(point[1])|0 : i in [1..#point]]; end if;
+  until Abs(point[i]) gt 10^-(Floor(precision/2));
+  return [p/point[i] : p in point];
+end intrinsic;
