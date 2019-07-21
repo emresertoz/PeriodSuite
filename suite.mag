@@ -1,4 +1,4 @@
-pathToSuite:="/Users/sertoez/git-projects/suite/";
+pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -158,6 +158,9 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
 
   ell := func<p | (Degree(p)+Ngens(Parent(p)))/Degree(f)>;
 
+  //***********************
+  // SMALL SUBFUNCTIONS
+  
   // to be used only for homogeneous forms
   function GDhom(p)
     // check if ell(p) = 1
@@ -181,6 +184,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     until p eq (R!0);
     return q;
   end function;
+  
   // differentiate the coefficients
   function delT(p)
     c,m:=CoefficientsAndMonomials(p);
@@ -188,68 +192,113 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     return Polynomial(dc,m);
   end function;
   dtf := delT(f);
+  
   // differentiate hom forms
   delTHomForm := func<a | delT(a) - ell(a)*dtf * a>;
+  
   // differentiate the form p*Omega/f^l
   function delTForm(p)
     comps:=HomogeneousComponents(p);
     return &+[delTHomForm(c) : c in comps];
   end function;
 
+  // Check independence of the form `f` in the matrix ot forms `M`.
+  // Return a boolean and an updated matrix-of-forms `M`
+  function cumulativeIsIndependent(M, mons, f)
+
+      f_mons:= Monomials(f);
+      new_mons := Seqset(f_mons) diff Seqset(mons);
+
+      // Expand the matrix to keep track of new monomials, if there are any.
+      if not IsEmpty(new_mons) then
+	  mons := mons cat Setseq(new_mons);	 
+	  M := HorizontalJoin(M, ZeroMatrix(K, Nrows(M), #new_mons));
+      end if;
+
+      // Insert the coordinates of f into the new matrix.
+      M := VerticalJoin(M, Matrix(K, [[MonomialCoefficient(f, m) : m in mons]]));
+      
+      // Reduce the matrix M to Echelon form. The matrix has many 0 entries above pivots
+      // by construction, so very few eliminations are performed.
+      M := EchelonForm(M);
+      v := Rows(M);
+
+      return IsZero(v[#v]), M, mons;
+  end function;
+  
+  //********************************
+  // PICARD FUCHS SUBFUNCTION
+  
   // The following ring is used only to store
   // the differential operators
   RR<D>:=PolynomialRing(K); 
 
-  function PF(form : PFnumber:=0, TotalPFs:=0, max_order:=0);
+  function PF(form : PFnumber:=0, TotalPFs:=0, max_order:=0)
+      
+    // Initialize.							    
     reducedDerivatives:=[form];
-    mons:=Monomials(reducedDerivatives[1]);
     message:=(family_number gt 0) select " -- Family number "*Sprint(family_number) else "";
+
+    // Main loop
     print "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,message,"\n";
     tstart:=Cputime();
     t2:="null";
     stopLoop:=false;
     current_order:=0;
+
+    // Setup cached matrix of independent forms.
+    reduced_forms_matrix := Matrix(K,0,0,[]); mons := [];
+    stopLoop, reduced_forms_matrix, mons := cumulativeIsIndependent(reduced_forms_matrix, mons, form);
+    
     repeat
+
+      // Compute Griffith-Dwork reduction of form.
       t0:=Cputime();
-      if #reducedDerivatives gt 1 then
-        printf "Checking independence took %o seconds. ", t0-t2;
-      end if;
+      
       current_order +:= 1;
-      if current_order eq max_order then
-        // self-destruct
-        // -test-
-        SetQuitOnError(true);
-        error "max order exceeded";
-      end if;
-      lastDerivative:=delTForm(reducedDerivatives[#reducedDerivatives]);
-      lastDerivativeReduced:=GD(lastDerivative);
+      error if current_order eq max_order, "max order exceeded";
+
+      lastDerivative := delTForm(reducedDerivatives[#reducedDerivatives]);
+      lastDerivativeReduced := GD(lastDerivative);
       Append(~reducedDerivatives,lastDerivativeReduced);
+      assert #reducedDerivatives gt 1;
+      
       t1:=Cputime();
       printf "GD reduction took %o seconds. ", t1-t0;
-      mons:= mons cat Monomials(reducedDerivatives[#reducedDerivatives]);
-      if &+[Degree(a) : a in reducedDerivatives] eq 0 then
-        stopLoop := #reducedDerivatives gt 1;
-        t2:=Cputime();
-      else
-        L:=LinearSystem(Spec(R),mons);
-        mu:=CoefficientMap(L);
-        gens:=mu(reducedDerivatives);
-        t2:=Cputime();
-        stopLoop:=not IsIndependent(gens);
-      end if;
+
+      // ****
+      // Construct the matrix to check independence.
+      // mons:= mons cat Seqset(Monomials(reducedDerivatives[#reducedDerivatives]));
+
+      stopLoop, reduced_forms_matrix, mons :=
+	  cumulativeIsIndependent(reduced_forms_matrix, mons, lastDerivativeReduced);
+      
+      // Check if all forms have degree 0.
+      if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
+      
+      /*
+      L:=LinearSystem(Spec(R),mons);
+      mu:=CoefficientMap(L);
+      gens:=mu(reducedDerivatives);
+      stopLoop:=not IsIndependent(gens);
+      */
+
+      t2:=Cputime();      
+      printf "Checking independence took %o seconds. ", t2-t1;     
     until stopLoop;
 
     t0:=Cputime();
     printf "Checking independence took %o seconds. ", t0-t2;
     print "Found linearly dependent derivatives in", t0-tstart, "seconds.";
     print "Will now compute the linear relation.";
-
+    
     mon:=&join[Seqset(Monomials(a)):a in reducedDerivatives];
     mon:=Setseq(mon);
-    MM:=[[MonomialCoefficient(a,m):m in mon]:a in reducedDerivatives];
+    MM:=[[MonomialCoefficient(a,m):m in mon]:a in reducedDerivatives];    
     M:=Matrix(MM[1..(#MM-1)]);
     t1:=Cputime();
     printf "Computed the basismatrix in %o seconds. ", t1-t0;
+
     U:=VectorSpaceWithBasis(M);
     t2:=Cputime();
     printf "Constructed the vectorspace w/ basis in %o seconds. ", t2-t1;
@@ -264,6 +313,8 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     return &+[coefs[i]*D^(i-1):i in [1..#coefs]], reducedDerivatives;
   end function;
 
+  //*******************************
+  
   PFeqns:=[RR|];
   derivativesOfForms:=[];
 
