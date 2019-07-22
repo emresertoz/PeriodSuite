@@ -206,24 +206,24 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   // Return a boolean and an updated matrix-of-forms `M`
   function cumulativeIsIndependent(M, mons, f)
 
-      f_mons:= Monomials(f);
-      new_mons := Seqset(f_mons) diff Seqset(mons);
+    f_mons:= Monomials(f);
+    new_mons := Seqset(f_mons) diff Seqset(mons);
 
-      // Expand the matrix to keep track of new monomials, if there are any.
-      if not IsEmpty(new_mons) then
-	  mons := mons cat Setseq(new_mons);	 
-	  M := HorizontalJoin(M, ZeroMatrix(K, Nrows(M), #new_mons));
-      end if;
+    // Expand the matrix to keep track of new monomials, if there are any.
+    if not IsEmpty(new_mons) then
+      mons := mons cat Setseq(new_mons);	 
+      M := HorizontalJoin(M, ZeroMatrix(K, Nrows(M), #new_mons));
+    end if;
 
-      // Insert the coordinates of f into the new matrix.
-      M := VerticalJoin(M, Matrix(K, [[MonomialCoefficient(f, m) : m in mons]]));
+    // Insert the coordinates of f into the new matrix.
+    M := VerticalJoin(M, Matrix(K, [[MonomialCoefficient(f, m) : m in mons]] ));
       
-      // Reduce the matrix M to Echelon form. The matrix has many 0 entries above pivots
-      // by construction, so very few eliminations are performed.
-      M := EchelonForm(M);
-      v := Rows(M);
+    // Reduce the matrix M to Echelon form. The matrix has many 0 entries above pivots
+    // by construction, so very few eliminations are performed.
+    M := EchelonForm(M);
+    v := Rows(M);
 
-      return IsZero(v[#v]), M, mons;
+    return IsZero(v[#v]), M, mons;
   end function;
   
   //********************************
@@ -248,7 +248,8 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
 
     // Setup cached matrix of independent forms.
     reduced_forms_matrix := Matrix(K,0,0,[]); mons := [];
-    stopLoop, reduced_forms_matrix, mons := cumulativeIsIndependent(reduced_forms_matrix, mons, form);
+    stopLoop, reduced_forms_matrix, mons :=
+	cumulativeIsIndependent(reduced_forms_matrix, mons, form);
     
     repeat
 
@@ -268,27 +269,18 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
 
       // ****
       // Construct the matrix to check independence.
-      // mons:= mons cat Seqset(Monomials(reducedDerivatives[#reducedDerivatives]));
-
+      
       stopLoop, reduced_forms_matrix, mons :=
 	  cumulativeIsIndependent(reduced_forms_matrix, mons, lastDerivativeReduced);
       
       // Check if all forms have degree 0.
-      if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
+      // if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
       
-      /*
-      L:=LinearSystem(Spec(R),mons);
-      mu:=CoefficientMap(L);
-      gens:=mu(reducedDerivatives);
-      stopLoop:=not IsIndependent(gens);
-      */
-
       t2:=Cputime();      
       printf "Checking independence took %o seconds. ", t2-t1;     
     until stopLoop;
 
     t0:=Cputime();
-    printf "Checking independence took %o seconds. ", t0-t2;
     print "Found linearly dependent derivatives in", t0-tstart, "seconds.";
     print "Will now compute the linear relation.";
     
