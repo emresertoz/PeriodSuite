@@ -3,8 +3,8 @@
 # precision : target precision
 # d : degree of fermat hypersurface
 
-storage_dir=pathToSuite+"freezer/";
-bit_precision=ceil(log(10^precision)/log(2))+50
+storage_dir=pathToSuite+"fermat_data/";
+#bit_precision=ceil(log(10^precision)/log(2))+50
 xi=N(exp(2*pi*I/d),bit_precision) #d-th root of unity
 
 def gamma_values_to_compute(alphas):

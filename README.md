@@ -115,7 +115,7 @@ X`primitivePeriods : the primitive periods of X.
 X`periods : the periods of X. When X is odd dimensional this coincides with the primitive periods of X.
 ```
 
-Auxiliary data are written in to the directory `incinerator`, where it is read by `integrator.sage`. As the name suggests, files in this folder are not safe as the folder will be cleared of content at the beginning of each execution of `PeriodHomotopy`. 
+Auxiliary data are written in to the directory `ode_storage/incinerator`, where it is read by `integrator.sage`. As the name suggests, files in this folder are not safe as the folder will be cleared of content at the beginning of each execution of `PeriodHomotopy`. 
 
 ### Path finder
 
@@ -141,8 +141,35 @@ If you have a sequence of smooth, degree `d` polynomials `f0,f1,..,fr` where `f0
 
 The period homotopy will be performed on this sequence with `f5` being the target hypersurface and `fi`'s the only intermediate hypersurfaces.
 
-### Obtain all periods
+### Monodromy / Picard-Lefschetz
 
-By default we compute as few periods on the target surface as would be needed to construct the entire Hodge decomposition on cohomology. If you wish to compute the entire period matrix use the following command:
+If you would like to compute the monodromy operator of going counterclockwise around a singular hypersurface, then you can do so using PeriodHomotopy which uses the periods of nearby fibers. If you give a singular target hypersurface, this intention is understood and the necessary computations are performed. For example:
 
-    Magma> PeriodHomotopy(f : bound_pole_order:=false);
+    Magma> P3<x,y,z,w>:=PolynomialRing(Rationals(),4);
+    Magma> def:=[ x^4 - y^4 - z^4 - w^4, x^4 - y^4 - y^2*z^2 - z^4 - w^4, x^4 - y^2*z^2 ];
+    Magma> X:=PeriodHomotopy(def : bound_pole_order:=false, precision:=100);
+    Magma> X:=PicardLefschetz(X);
+    Magma> X`monodromy;
+    [ 0  0  0  0  0  0 -1  0 -1  0  0  1  0  1  1  1  1  0  0 -1  0]
+    [ 0  0  0 -1  0  0 -1  0 -1  0  0  1  0  1  1  2  0  0  1  0  1]
+    [ 0  1  1  0 -1 -1 -2 -1 -2 -1  0  2  0  3  0  1  1  1  0  0  0]
+    [ 0  0  0  1  0  0 -1  0 -1 -1 -1  1 -1  0  1  1  1  1  0 -1  0]
+    [ 0  0  0  0  0  0 -1  0 -1 -1  0  1  0  1  1  1  1  0  0  0  1]
+    [ 0  0  0 -1  0  0 -1  0 -1  0  0  1  0  2  0  1  0  0  1  0  1]
+    [ 1  0  1  0 -1 -1  0 -1  0 -1 -1  0 -1 -1  0  1 -1  1  0  1  1]
+    [ 0  0  0  0  0  0 -1  0 -1 -1  0  1  0  1  1  1  1  0  1 -1  0]
+    [ 1  2  1  1 -2 -2 -1 -2 -1 -2 -1  1 -1  1 -1  0  0  2  0  1 -1]
+    [ 0  1  1  0 -1 -1 -1 -1 -1  0  0  1  0  1  0  1  0  1 -1  0 -1]
+    [ 0  0  0  1  0  0 -1  0 -1 -1  0  1  0  1  1  0  1  0  0 -1  0]
+    [ 1  1  1  1 -2 -1 -1 -1 -1 -2 -1  1 -1  1  0  0  0  2 -1  1  0]
+    [ 0 -1 -1  0  1  1  0  1  0  0  0  0  0 -1  1  1  1 -1  1 -1  1]
+    [ 1  1  1  0 -1 -2  0 -1  0 -1 -1  0 -1  0 -1  0 -1  1  0  1  0]
+    [ 0  1  1  0 -1 -1 -1 -1  0  0  0  0  0  1  0  0 -1  1 -1  1  0]
+    [ 1  0  0  0  0  0  0 -1  0 -1 -1  0 -1 -1  0  1  0  1  1  0  0]
+    [ 0  1  1  0 -1 -1  0 -1 -1  0  0  0  0  1 -1  0  0  1  0  1 -1]
+    [ 0  0  0  1  0  0  0  0  0 -1  0  0  0 -1  1  0  1  0  0 -1  0]
+    [ 0  1  1  1 -1 -1 -1 -1 -1 -1 -1  1  0  1  0  0  0  1  0  0 -1]
+    [ 0  1  1  1 -1 -1 -1 -1 -1 -1  0  0  0  2  0  0  0  1 -1  1 -1]
+    [ 0  0  0  0  0  0  0  0  0  0  0  0 -1 -1  0  1  0  0  0  0  1]
+
+If you are reading this, then you are on an experimental branch. Please let me know of any bugs you encounter.
