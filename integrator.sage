@@ -1,4 +1,4 @@
-pathToSuite="/Users/sertoez/git-projects/suite/";
+pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 load(pathToSuite+"ivpdir.sage")
 ncpus=100
 

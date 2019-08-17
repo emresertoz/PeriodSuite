@@ -1,4 +1,4 @@
-pathToSuite:="/Users/sertoez/git-projects/suite/";
+pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -1235,6 +1235,106 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   if not IsFermat(path[1]) then
     error "The initial polynomial is not of fermat type." ;
   end if;
+
+  beginningTime:=Realtime();
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+  // check if ivpdir exists
+  if System("[ -d "*ivpdir*" ]") eq 0 then
+    if overwrite then
+      System("rm -fr "*ivpdir*"*");
+    else
+      error "folder name already exists, change 'name' or set 'overwrite:=true'";
+    end if;
+  else 
+    System("mkdir "*ivpdir);
+  end if;
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
+  
+  // either the right number of integrationPaths should be provided, or none at all
+  if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
+  assert #integrationPaths eq #path-1; 
+
+
+  target:=path[#path]; 
+  target_is_smooth:=isSmooth(target);
+  P:=Parent(target);
+  n:=Ngens(P)-2;
+  d:=Degree(target); 
+  if d eq 1 then
+    error "Degree of the hypersurface needs to be greater than one.";
+  end if;
+
+  // bounding the pole order of cohomology classes for the target hypersurface accelerates the procedure, while providing complete information on the Hodge decomposition
+  // but we can only bound pole order, if there is non-zero classes outside of H^{n/2,n/2}
+  if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
+  pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
+
+  allODEs:=[];
+  tstart:=Realtime();
+  for i in [1..(#path-1)] do
+    print "\n\n************************************\nWe are at family number",i,"out of",#path-1,"\n************************************\n";
+    if i ne (#path-1) then
+      pob:=0; // pole order bound
+      f1_is_smooth:=true;
+    else
+      pob:=pole_order_bound; // in the last step we need only compute some of the periods
+      f1_is_smooth:=target_is_smooth;
+    end if;
+      ivps:=ConstructIVPs(path[i],path[i+1] : pathfinder:=pathfinder, family_number:=i, integrationPath:=integrationPaths[i], pole_order_bound:=pob, reduce_initials:=reduce_initials,precision:=precision, f1_is_smooth:=f1_is_smooth);
+      Append(~allODEs,ivps`ODEs);
+
+      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1, name:=name);
+    // to parallelize one could start integration at this point, or even sooner for each IVP
+  end for;
+
+  print "\n\nIf this is the first time, we will compute a Pham basis for the Fermat hypersurface of degree", d, "and dimension", n;
+  // intmat is not urgent, but phamB is recorded for sage to use
+  phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
+  // define a period bundle
+  bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
+  odes:=allODEs,
+  deformation:=path, cohomBasis:=ivps`movingBasis,
+  name:=name
+  >;
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
+
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  if integrate then
+    print "Starting integration.\n\n";
+    bundle:=SolveIVPs(bundle);
+  end if;
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+
+  pathMons:=[#Monomials(p) : p in path];
+  pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
+  print "Used the following path:",path;
+  print "The number of monomials appearing at each step:\n",pathMons;
+  print "The number of monomials changed at each step:\n",pathMonsChange;
+
+  if #name gt 0 then SaveBundle(bundle); end if;
+
+  return bundle, ivpdir;
+end intrinsic;
+
+intrinsic TransistionHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
+{
+  Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
+}
+
+  if #path eq 1 then
+    error "Transition Homotopy needs start and endpoint as input. Perhaps you intended PeriodHomotopy?";
+  end if;
+    return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
+
 
   beginningTime:=Realtime();
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
