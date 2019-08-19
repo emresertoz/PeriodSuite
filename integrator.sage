@@ -14,6 +14,7 @@ field=ComplexBallField(bit_precision)
 
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
+    print("Old script: Core initiated")
     load(ode_label)
     if loop_position > -1:
         return integrate_ode_with_loop(ode_label)

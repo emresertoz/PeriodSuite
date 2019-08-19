@@ -1359,10 +1359,11 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   beginningTime:=Realtime();
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
-  
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
+
+  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name);
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
