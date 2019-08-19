@@ -1362,7 +1362,6 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
   WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
   
   // either the right number of integrationPaths should be provided, or none at all
@@ -1391,17 +1390,12 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
       print "\n\n************************************\nWe are at family number",i,
 	    "out of",#path-1,"\n************************************\n";
 
-      if i ne (#path-1) then
-	  pob:=0; // pole order bound
-	  f1_is_smooth:=true;
-      else
-	  pob:=pole_order_bound; // in the last step we need only compute some of the periods
-	  f1_is_smooth:=target_is_smooth;
-      end if;
-
+      pob:=0; // pole order bound
+      f1_is_smooth:=target_is_smooth;
+      
       ivps:=ConstructIVPs(path[i],path[i+1] :
 			  pathfinder:=pathfinder, family_number:=i,
-			  integrationPath:=integrationPaths[i], pole_order_bound:=pob,
+			  integrationPath:=integrationPaths[i], pole_order_bound:=0,
 			  reduce_initials:=reduce_initials,precision:=precision,
 			  f1_is_smooth:=f1_is_smooth);
       

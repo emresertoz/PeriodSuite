@@ -12,7 +12,7 @@ DOP, t, D = DifferentialOperators()
 bit_precision=ceil(log(10^(precision+10))/log(2))+100
 field=ComplexBallField(bit_precision)
 
-@parallel(ncpus=ncpus)
+#@parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
     load(ode_label)
     if loop_position > -1:
@@ -155,8 +155,8 @@ for i in [1..steps]:
     compatible_tms[i-1]=change_coordinates*tm_with_error
 
 
-with open(ivpdir+filename,'w') as  outfile:
-    outfile.write(tm_with_error)
-    outfile.write(compatible_tms)
+## Some formatting of these complex ball matrices required.
+with open(ivpdir+"transition_mat",'w') as  outfile:
+    outfile.write(str(compatible_tms))
     
 
