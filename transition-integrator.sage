@@ -87,7 +87,7 @@ def integrate_ode(ode_label):
     tm = ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
 
     max_err = max( x.diameter() for x in tm.list() )    
-    print "\tODE", label, "is complete. Max error: ", max_err
+    print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
     
     # Check if M has been computed approximately or exactly.
     # We basically always receive exact input.
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     print "Integration completed in",time.time()-t0,"seconds."
     
 ## Function for patching together data from the parallelization.
-print "rearranging the matrices"
+print "Rearranging the matrices. Writing to file..."
 
 def ith_compatible_matrix(i):
     # File contains `change_coordinates`
@@ -149,8 +149,7 @@ def ith_compatible_matrix(i):
     tm =  matrix( field, [tms[k].list() for k in tms.keys() if k[0] == i+1] )
     return change_coordinates*tm
 
-total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
-
 ## Write to file.
 with open(ivpdir+"transition_mat",'w') as  outfile:
+    total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
