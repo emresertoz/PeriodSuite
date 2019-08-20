@@ -1,13 +1,21 @@
 
-
 from sage.geometry.voronoi_diagram import VoronoiDiagram
+
+def simplest_gaussian_rational(r):
+    return (real(r).simplest_rational(), imag(r).simplest_rational())
 
 ######
 # Takes a list of polynomials, and constructs a rectangular path from 0 to 1 avoiding
 # the (non 0 or 1) roots of the polynomials
+#
+# Returns the best expected path, as well as the list of singular points.
 def voronoi_path(polylist):
-    pts=set()
-    P.<s>=PolynomialRing(QQ)
+
+    R   = QQ
+    pts = set()
+    P   = polylist[0].parent()    
+    s   = gens(P)[0]
+    
     print "Solving for dangerous points..."
     for p in polylist:
         p=P(p).radical()
@@ -17,14 +25,14 @@ def voronoi_path(polylist):
         if p(1) == 0:
             p=P(p/(s-1))
         roots=[r[0] for r in p.roots(ring=ComplexField(300))]
-        pts = pts.union(set((real(r).simplest_rational(),imag(r).simplest_rational()) for r in roots))
+        pts = pts.union(set(simplest_gaussian_rational(r) for r in roots))
     
-    R=QQ
     pts.add((R(0),R(0)))
     pts.add((R(1),R(0)))
     if len(pts) == 2:
         return [0,1]
-    # to discourage paths going in off directions
+
+    # Add a bounding box to discourage paths going in off directions
     [[pts.add((R(i),R(j))) for i in {-1,1}] for j in {-1,1}]
 
     print "Constructing Voronoi diagram..."
@@ -49,3 +57,7 @@ def voronoi_path(polylist):
                 gr.add_edge(pt, u, 1.0)
     
     return gr.shortest_path(QQ(0), QQ(1), by_weight=True), pts
+
+
+##########################3
+

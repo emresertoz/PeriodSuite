@@ -1141,7 +1141,7 @@ intrinsic suffix(number::RngIntElt,  max_number::RngIntElt) -> MonStgElt
   return Sprint(10^digits+number)[2..(digits+1)];
 end intrinsic;
 
-intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
+intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="", singular_locus:=false)
 {
   Writes the output of ConstructIVPs in a format readable by Sage.
 }
@@ -1158,12 +1158,19 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
   
   for i in [1..#E`ODEs] do
     ode_filename:="IVP-"*suffix(number,max_number)*"-"*suffix(i,#E`ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true,name:=name);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]):name:=name);
+      
+    WriteInsideTempFolder(ode_filename, "ode="  *Sprint(E`ODEs[i])  : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename, "init=" *Sprint(E`inits[i]) : name:=name);
+
     //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath):name:=name);
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")":name:=name);
-    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position):name:=name);
+
+    WriteInsideTempFolder(ode_filename, "path="   *Sprint(E`integrationPath)        : name:=name);
+    WriteInsideTempFolder(ode_filename, "label=(" *Sprint(number)*","*Sprint(i)*")" : name:=name);
+    WriteInsideTempFolder(ode_filename, "loop_position=" *Sprint(E`loop_position)   : name:=name);
+
+    if Type(singular_locus) ne BoolElt then
+      WriteInsideTempFolder(ode_filename,"singular_locus="*Sprint(singular_locus) : name:=name);
+    end if;
   end for;
 
   // not required
@@ -1344,6 +1351,25 @@ end procedure;
 //****************************************
 // TransitionHomotopy Section.
 
+// Input: f0,f1
+// Output: A list of polynomials whose roots specify the values of t
+// for which (1-t)*f0 + t*f1 is singular. Usually this is just the list [1].
+//
+function SingularLocusInFamily(f0,f1)
+    P := Parent(f0);
+    R<t> := PolynomialRing(Rationals(), Ngens(P)+1, "elim", 1);
+    inc := hom<P->R|[R.i : i in [2..Ngens(R)]]>;
+    
+    F  := (1-t)*inc(f0)+t*inc(f1);
+    I  := ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
+    J  := ideal<R|[R.i : i in [2..Ngens(R)]]>;
+
+    IJ := Saturation(I,J);
+    gb := GroebnerBasis(IJ);
+    polys :=[p : p in gb | IsUnivariate(p,t)];
+    return polys;
+end function;
+
 intrinsic TransitionHomotopy(path::[RngMPolElt] :
 			      precision:=100, straight:=false, bound_pole_order:=true,
 			      pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",
@@ -1351,6 +1377,8 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 {
     Computes the transition matrices needed to carry periods from paths[1] to paths[#paths].
 }
+  // NOTE: integration paths here means the list of quartics to get from start to finish,
+  //       instead of the real contor inside a P1 used to compute the transition matrices.
 
   if #path eq 1 then
     error "Transition Homotopy needs start and endpoint as input. Perhaps you meant PeriodHomotopy?";
@@ -1403,8 +1431,10 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
       
       Append(~allODEs,ivps`ODEs);
 
-      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1, name:=name);
-      // to parallelize one could start integration at this point, or even sooner for each IVP
+      slocus := SingularLocusInFamily(path[i],path[i+1]);
+      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1,
+			     name:=name, singular_locus := slocus);
+
   end for;
 
   // define a period bundle
@@ -1436,26 +1466,6 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 
   return bundle, ivpdir;
 end intrinsic;
-
-// Input: f0,f1
-// Output: None.
-// Determines a list of polynomials whose roots specify the values of t
-// for which (1-t)*f0 + t*f1 is singular. Usually this is just the list [1].
-//
-// Data is written to a file for sage to read the input.
-// Specifically the voronoi_path function.
-procedure WriteSingularPointsInFamily(f0,f1, filename)
-    P := Parent(f0);
-    R<t> := PolynomialRing(Rationals(), Ngens(P)+1, "elim", 1);
-    inc := hom<P->R|[R.i : i in [2..Ngens(R)]]>;
-    F  := (1-t)*inc(f0)+t*inc(f1);
-    I  := ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
-    J  := ideal<R|[R.i : i in [2..Ngens(R)]]>;
-    IJ := Saturation(I,J);
-    gb := GroebnerBasis(IJ);
-    polys :=[p : p in gb | IsUnivariate(p,t)];
-    return;
-end procedure;
 
 intrinsic SolveTransitionIVPs(bundle::Any) -> Any
 {

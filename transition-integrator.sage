@@ -1,5 +1,6 @@
 pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 load(pathToSuite+"ivpdir.sage")
+load("voronoi_path.sage")
 
 import time
 import pickle
@@ -57,9 +58,6 @@ The return type of this function is a tuple [ TMconv, Bool, label], where:
 
 -- label is the dictionary label for the ode.
 
-Given an ode_label identifying which of the 21
-
-
 ====================================================
 EXAMPLE FORMAT OF THE "IVP-*-*.sage" FILE:
 
@@ -71,67 +69,68 @@ init=[
 path=[ 0, 1 ]
 label=(1,2)
 loop_position=-1
+sngular_locus=[1]
 
 """
+# For the sake of code clarity, we pass the value back as a proper function call.
+# Alternatively, the rows can be written to files to be dealt with later instead.
+#
 def integrate_ode(ode_label):
     print("Integration started")    
 
-    # Load the file with the ode_label.
-    load(ode_label)
-    # File defines values: ode, init, path, label, loop_position
-
-    M = Matrix(init)   # The matrix of initial conditions.
+    P.<t>=PolynomialRing(QQ)
+    load(ode_label)    # File defines values: ode, init, path, label, loop_position, singular_locus
     
-    # TODO: At this point, we should decide on
-    # -- integration path (via voronoi method),   
-    tm = ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+    initial_conditions = Matrix(init)
+    path, singpts = voronoi_path(singular_locus)
+    
+    transition_mat = complex_numerical_transition_matrix(ode, path, precision)
 
-    max_err = max( x.diameter() for x in tm.list() )    
+    # Harmonize base rings.
+    if not is_exact_ring(initial_conditions.base_ring()):
+        initial_conditions = initial_conditions.change_ring(transition_mat.base_ring())
+
+    # Status update.
+    max_err = max( x.diameter() for x in transition_mat.list() )    
     print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
     
-    # Check if M has been computed approximately or exactly.
-    # We basically always receive exact input.
-    if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
-        M = MatrixSpace(ComplexBallField(tm.parent().base().precision()), M.nrows(), M.ncols())(M)
+    # due to a bug with the Arb-Sage interface, convert to a portable object.
+    transition_row = ARBMatrixCerealWrap(matrix( transition_mat.row(0)*initial_conditions ))
+    return [transition_row,False,label] 
+#####
 
-    # Compute the transition row from the ODE and initial conditions.
-    # due to a bug with the Arb-Sage interface, we convert to a portable object.
-    TM = matrix(tm.row(0)*M)    
-    TMcomp = ARBMatrixCerealWrap(TM)
 
-    # Alternatively, the rows can be written to files to be dealt with later.
-    return [TMcomp,False,label] 
-    
+""" Formatted return of the ODE solver. """
+def complex_numerical_transition_matrix(ode, path, precision):
+    tm = ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+    return  tm.change_ring(ComplexBallField(tm.base_ring().precision()))
+
+def is_exact_ring(ring):
+    return (ring == Rationals() or ring == Integers() )
 
 ###########################################################################################
 # Main script start.
 
 ## Look for load files in the directory.
+#  The IVPs and the basis compatibility matrices are computed from MAGMA.
 t0=time.time()
 ivps=[]
+basis_change_files=[]
 for file in os.listdir(ivpdir):
     if file.startswith("IVP-") and file.endswith(".sage"):
         ivps.append(os.path.join(ivpdir,file))
-        
-ivps.sort()
-
-## Transition matrices made compatible with base changes
-#  The transition matrices are computed from MAGMA.
-basis_change_files=[]
-for file in os.listdir(ivpdir):
-    if file.startswith("BaseChange-") and file.endswith(".sage"):
+    elif file.startswith("BaseChange-") and file.endswith(".sage"):
         basis_change_files.append(os.path.join(ivpdir,file))
 
-# TODO: This goes badly wrong if there are 11 base-change files...
+# TODO: Sorting will  go badly wrong if there are >=10 base-change files...
+#       Should be fixed.
+ivps.sort()
 basis_change_files.sort()
 
 
-if __name__ == '__main__':
-
-    ## Transition matrices but without intermediate base changes
+## The most time consuming part: where the solutions are actually tracked.
+if __name__ == '__main__':    
     tms={}    
-
-    ## most time consuming part: where the solutions are actually tracked.
     pool = mp.Pool(mp.cpu_count() - 10)
     results = pool.map(integrate_ode, ivps)
     for solution in results:
@@ -140,8 +139,6 @@ if __name__ == '__main__':
 
     print "Integration completed in",time.time()-t0,"seconds."
     
-## Function for patching together data from the parallelization.
-print "Rearranging the matrices. Writing to file..."
 
 def ith_compatible_matrix(i):
     # File contains `change_coordinates`
@@ -150,6 +147,8 @@ def ith_compatible_matrix(i):
     return change_coordinates*tm
 
 ## Write to file.
+print "Rearranging the matrices. Writing to file..."
+
 with open(ivpdir+"transition_mat",'w') as  outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
