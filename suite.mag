@@ -1341,14 +1341,15 @@ procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
 
 end procedure;
 
+//****************************************
+// TransitionHomotopy Section.
 
 intrinsic TransitionHomotopy(path::[RngMPolElt] :
 			      precision:=100, straight:=false, bound_pole_order:=true,
 			      pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",
 			      overwrite:=false,integrate:=true) -> Any
 {
-    Computes the periods of the hypersurface appearing as the last entry of "path".
-    First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
+    Computes the transition matrices needed to carry periods from paths[1] to paths[#paths].
 }
 
   if #path eq 1 then
@@ -1436,6 +1437,44 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   return bundle, ivpdir;
 end intrinsic;
 
+// Input: f0,f1
+// Output: None.
+// Determines a list of polynomials whose roots specify the values of t
+// for which (1-t)*f0 + t*f1 is singular. Usually this is just the list [1].
+//
+// Data is written to a file for sage to read the input.
+// Specifically the voronoi_path function.
+procedure WriteSingularPointsInFamily(f0,f1, filename)
+    P := Parent(f0);
+    R<t> := PolynomialRing(Rationals(), Ngens(P)+1, "elim", 1);
+    inc := hom<P->R|[R.i : i in [2..Ngens(R)]]>;
+    F  := (1-t)*inc(f0)+t*inc(f1);
+    I  := ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
+    J  := ideal<R|[R.i : i in [2..Ngens(R)]]>;
+    IJ := Saturation(I,J);
+    gb := GroebnerBasis(IJ);
+    polys :=[p : p in gb | IsUnivariate(p,t)];
+    return;
+end procedure;
+
+intrinsic SolveTransitionIVPs(bundle::Any) -> Any
+{
+    Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
+}
+    name:=bundle`name;
+    ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+    cols := GetColumns();
+    SetColumns(0);
+    print "\n\nStarting SageMath, this may take some time...\n\n";
+    Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+    SetColumns(cols);
+    System("$(which sage) "*PathToSuite()*"transition-integrator.sage");
+
+    return bundle;
+end intrinsic;
+
+
+//****************************************  End TransitionHomotopy Section.
 
 intrinsic SolveIVPs(name::MonStgElt) -> Any
 {
@@ -1479,25 +1518,6 @@ intrinsic SolveIVPs(bundle::Any) -> Any
   end if;
 
   return bundle;
-
-end intrinsic;
-
-
-intrinsic SolveTransitionIVPs(bundle::Any) -> Any
-{
-    Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
-}
-    name:=bundle`name;
-    ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-    cols := GetColumns();
-    SetColumns(0);
-    print "\n\nStarting SageMath, this may take some time...\n\n";
-    Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-    SetColumns(cols);
-    System("$(which sage) "*PathToSuite()*"transition-integrator.sage");
-
-
-    return bundle;
 
 end intrinsic;
 
