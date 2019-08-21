@@ -1371,9 +1371,11 @@ function SingularLocusInFamily(f0,f1)
 end function;
 
 intrinsic TransitionHomotopy(path::[RngMPolElt] :
-			      precision:=100, straight:=false, bound_pole_order:=true,
-			      pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",
-			      overwrite:=false,integrate:=true) -> Any
+			     precision:=100, straight:=false,
+			     bound_pole_order:=false,
+			     pathfinder:=0, integrationPaths:=[],
+			     reduce_initials:=true, name:="",
+			     overwrite:=false, integrate:=true) -> Any
 {
     Computes the transition matrices needed to carry periods from paths[1] to paths[#paths].
 }
@@ -1383,7 +1385,6 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   if #path eq 1 then
     error "Transition Homotopy needs start and endpoint as input. Perhaps you meant PeriodHomotopy?";
   end if;
-
 
   beginningTime:=Realtime();
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
@@ -1425,8 +1426,10 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
       
       ivps:=ConstructIVPs(path[i],path[i+1] :
 			  pathfinder:=pathfinder, family_number:=i,
-			  integrationPath:=integrationPaths[i], pole_order_bound:=0,
-			  reduce_initials:=reduce_initials,precision:=precision,
+			  integrationPath:=integrationPaths[i],
+			  pole_order_bound:=pole_order_bound,
+			  reduce_initials:=reduce_initials,
+			  precision:=precision,
 			  f1_is_smooth:=f1_is_smooth);
       
       Append(~allODEs,ivps`ODEs);

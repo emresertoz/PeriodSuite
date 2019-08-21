@@ -53,9 +53,6 @@ The return type of this function is a tuple [ TMconv, Bool, label], where:
 -- TMconv is the deconstructed form of a complex ball matrix. A tuple [A,B] where A is the matrix
    of midpoints and B is the matrix of errors.
 
-   NOTE: The only reason for this format is that Sage's @parallel decorator is miserable. In our code
-         I think we should just parallelize by hand.
-
 -- label is the dictionary label for the ode.
 
 ====================================================
