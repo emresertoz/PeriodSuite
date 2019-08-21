@@ -1474,16 +1474,23 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
 {
     Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
-    name:=bundle`name;
-    ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-    cols := GetColumns();
-    SetColumns(0);
-    print "\n\nStarting SageMath, this may take some time...\n\n";
-    Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-    SetColumns(cols);
-    System("$(which sage) "*PathToSuite()*"transition-integrator.sage");
+  name:=bundle`name;
+  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
 
-    return bundle;
+  /* cols := GetColumns(); */
+  /* SetColumns(0); */
+  /* print "\n\nStarting SageMath, this may take some time...\n\n"; */
+  /* Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true); */
+  /* SetColumns(cols); */
+
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+
+  // Format command string. Remember that command strings need quotes.
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir,
+			PathToSuite()*"transition-integrator.sage");
+
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  return bundle;
 end intrinsic;
 
 
@@ -1506,12 +1513,16 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-  cols := GetColumns();
-  SetColumns(0);
+  
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-  SetColumns(cols);
-  System("$(which sage) "*PathToSuite()*"integrator.sage");
+  //cols := GetColumns();
+  // SetColumns(0);
+  // Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+  //SetColumns(cols);
+
+  // Format command string. Remember that command strings need quotes. 
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
 
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
