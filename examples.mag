@@ -30,7 +30,7 @@ end function;
 
 // Generate a smooth quartic
 P<x,y,z,w> := PolynomialRing(Rationals(),4);
-f:=smoothPolynomial(P,4);
+f:=smoothPolynomial(P,4 : sparse:=4);
 
 // Compute a path of deformation, compatible cohomology bases at each step, find Picard-Fuchs equations, determine initial conditions, write to a Sage readable file (current.sage)
 time ph:=PeriodHomotopy([f]);
@@ -194,6 +194,7 @@ x^5 + x*z*w^3 + y^5 + z^4*w
 ];
 
 
+// This example presently does not finish computing within an hour.
 // Curve of high genus
 P<x,y,z>:=PolynomialRing(Rationals(),3);
 u:=20;
