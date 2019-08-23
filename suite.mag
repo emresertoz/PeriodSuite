@@ -4,7 +4,7 @@
 
 
 pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
-SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr"
+SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
 //************************************************************************************************
 // Directory management and File I/O
@@ -30,7 +30,7 @@ intrinsic PeriodSuiteStorageDir(:subfolder:="") -> MonStgElt
   end if;
 end intrinsic;
 
-intrinsic PeriodSuiteTempDir(:subfolder:="") -> MonStgElt
+intrinsic IVPWorkingDir(:subfolder:="") -> MonStgElt
 {
  Returns the directory for temp files of period-suite. 
 }
@@ -46,7 +46,7 @@ intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwri
   Writes the string to filename inside the appropriate folder within period-suite. Takes care of line breaking issues.
 }
   cols := GetColumns();
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   target:=ivpdir*filename;
   SetColumns(0);
   if (#name gt 0) and createFolder then
@@ -70,13 +70,14 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
 end intrinsic;
 
 procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
+    
   // if no name has been specified then set overwrite to true and clear ivpdir
   overwrite:=overwrite or (#name eq 0);
 
   // Unix conditional check to see if directory exists and if it is safe to overwrite.
   if System("[ -d "*ivpdir*" ]") eq 0 then
 
-    error if not System("[ -f "ivpdir*SAFEOVERWRITECODE*" ]" ),
+    error if not System("[ -f "*ivpdir*SAFEOVERWRITECODE*" ]" ),
 	     "Safe overwrite file: '"*SAFEOVERWRITECODE*"' does not exist in directory. "*
 	     "If you *really* want `rm -fr *` to run in this directory, create this file "*
 	     "and try again.";
@@ -93,7 +94,7 @@ end procedure;
 
 
 //************************************************************************************************
-// Fermat methods
+// Fermat polynomial construction methods
 //************************************************************************************************
 
 intrinsic Fermat(n::RngIntElt,d::RngIntElt : type:=[1 : i in [1..n+2]], P:=PolynomialRing(Rationals(),n+2)) -> RngMPolElt
@@ -105,6 +106,12 @@ intrinsic Fermat(P::RngMPol,d::RngIntElt : type:=[1 : i in [1..Ngens(P)]]) -> Rn
 { Returns the Fermat polynomial degree d in the polynomial ring P}
   return &+[ type[i]*P.i^d : i in [1..Ngens(P)]];
 end intrinsic;
+
+
+
+//************************************************************************************************
+// Picard-Fuchs related functions.
+//************************************************************************************************
 
 // input: 
 // L a nested list of polynomials
@@ -357,6 +364,11 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   return PFeqns;
 
 end intrinsic;
+
+//************************************************************************************************
+// Cohomology basis functions.
+//************************************************************************************************
+
 
 // pole_order_bound if non-zero constructs a cohomology basis which, using Griffiths residues, has pole order at most "pole_order_bound"
 intrinsic CompatibleCohomologyBasis(f0::RngMPolElt,f1::RngMPolElt : pole_order_bound:=0) -> SeqEnum
@@ -633,6 +645,11 @@ intrinsic LocalBasis(ode::RngUPolElt) -> SeqEnum
   return Reverse(exps); 
 end intrinsic;
 
+
+//************************************************************************************************
+// Functions to compute derivatives of forms.
+//************************************************************************************************
+
 intrinsic DifferentiateForm(numerator::RngMPolElt,f0::RngMPolElt,f1::RngMPolElt) -> RngMPolElt
 {
  Differentiates the form numerator*Omega/((1-t)*f0 + t*f1)^l, and outputs the new numerator.
@@ -682,6 +699,15 @@ intrinsic Analytics(ODEs::SeqEnum) -> SeqEnum
 }
   return [Analytics(odes) : odes in ODEs];
 end intrinsic;
+
+
+ 
+//************************************************************************************************
+//
+// Functions for solving Initial Value Problems (IVPs).
+//
+//************************************************************************************************
+
 
 // initial value problems
 IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
@@ -793,6 +819,14 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
   return B;
 
 end intrinsic;
+
+
+
+//************************************************************************************************
+//
+// Stuff....
+//
+//************************************************************************************************
 
 
 intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Delta:=0.9999, Eta:=0.5001, DeepInsertions:=false, Proof:=false, ForceRelation:=false) -> RngIntElt, SeqEnum
@@ -1282,8 +1316,8 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   beginningTime:=Realtime();
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-  CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
@@ -1399,7 +1433,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   end if;
 
   beginningTime:=Realtime();
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
   WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
@@ -1487,7 +1521,7 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
     Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
   name:=bundle`name;
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
 
   /* cols := GetColumns(); */
   /* SetColumns(0); */
@@ -1524,7 +1558,7 @@ intrinsic SolveIVPs(bundle::Any) -> Any
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
   name:=bundle`name;
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   
   print "\n\nStarting SageMath, this may take some time...\n\n";
   //cols := GetColumns();
