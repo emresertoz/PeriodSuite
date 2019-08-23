@@ -1,9 +1,9 @@
+pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+
 //************************************************************************************************
 // Global constants.
 //************************************************************************************************
 
-
-pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
 //************************************************************************************************
@@ -32,7 +32,8 @@ end intrinsic;
 
 intrinsic IVPWorkingDir(:subfolder:="") -> MonStgElt
 {
- Returns the directory for temp files of period-suite. 
+Returns either the directory for temp files of period-suite or, if subfolder is specified,
+the directory to the identified subfolder.
 }
   if #subfolder eq 0 then
     return PathToSuite()*"ode_storage/incinerator/";
@@ -77,7 +78,7 @@ procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
   // Unix conditional check to see if directory exists and if it is safe to overwrite.
   if System("[ -d "*ivpdir*" ]") eq 0 then
 
-    error if not System("[ -f "*ivpdir*SAFEOVERWRITECODE*" ]" ),
+    error if System("[ -f "*ivpdir*SAFEOVERWRITECODE*" ]" ) ne 0,
 	     "Safe overwrite file: '"*SAFEOVERWRITECODE*"' does not exist in directory. "*
 	     "If you *really* want `rm -fr *` to run in this directory, create this file "*
 	     "and try again.";
