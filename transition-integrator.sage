@@ -133,8 +133,10 @@ basis_change_files.sort()
 ## The most time consuming part: where the solutions are actually tracked.
 if __name__ == '__main__':    
     tms={}    
-    pool = mp.Pool(mp.cpu_count() - 10)
-    results = pool.map(integrate_ode, ivps)
+    #pool = mp.Pool(mp.cpu_count() - 10)
+    #results = pool.map(integrate_ode, ivps)
+
+    results = map(integrate_ode, ivps)
     for solution in results:
         label      = solution[-1]
         tms[label] = solution[0]

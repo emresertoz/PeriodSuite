@@ -1,4 +1,15 @@
+//************************************************************************************************
+// Global constants.
+//************************************************************************************************
+
+
 pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr"
+
+//************************************************************************************************
+// Directory management and File I/O
+//************************************************************************************************
+
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -57,6 +68,33 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
 end intrinsic;
+
+procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+
+  // Unix conditional check to see if directory exists and if it is safe to overwrite.
+  if System("[ -d "*ivpdir*" ]") eq 0 then
+
+    error if not System("[ -f "ivpdir*SAFEOVERWRITECODE*" ]" ),
+	     "Safe overwrite file: '"*SAFEOVERWRITECODE*"' does not exist in directory. "*
+	     "If you *really* want `rm -fr *` to run in this directory, create this file "*
+	     "and try again.";
+
+    error if not overwrite, "folder name already exists, change 'name' or set 'overwrite:=true'";
+    System("rm -fr "*ivpdir * "*");
+    System("touch "*ivpdir*SAFEOVERWRITECODE); // Reset the safe overwrite file.
+  else 
+    System("mkdir "*ivpdir);
+    System("touch "*ivpdir*SAFEOVERWRITECODE);
+  end if;
+
+end procedure;
+
+
+//************************************************************************************************
+// Fermat methods
+//************************************************************************************************
 
 intrinsic Fermat(n::RngIntElt,d::RngIntElt : type:=[1 : i in [1..n+2]], P:=PolynomialRing(Rationals(),n+2)) -> RngMPolElt
 { Returns the polynomial of a Fermat hypersurface of dimension n and of degree d}
@@ -1245,18 +1283,7 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 
   beginningTime:=Realtime();
   ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-  // if no name has been specified then set overwrite to true and clear ivpdir
-  overwrite:=overwrite or (#name eq 0);
-  // check if ivpdir exists
-  if System("[ -d "*ivpdir*" ]") eq 0 then
-    if overwrite then
-      System("rm -fr "*ivpdir*"*");
-    else
-      error "folder name already exists, change 'name' or set 'overwrite:=true'";
-    end if;
-  else 
-    System("mkdir "*ivpdir);
-  end if;
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
@@ -1332,21 +1359,6 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   return bundle, ivpdir;
 end intrinsic;
 
-procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
-  // if no name has been specified then set overwrite to true and clear ivpdir
-  overwrite:=overwrite or (#name eq 0);
-
-  if System("[ -d "*ivpdir*" ]") eq 0 then
-    if overwrite then
-      System("rm -fr "*ivpdir*"*");
-    else
-      error "folder name already exists, change 'name' or set 'overwrite:=true'";
-    end if;
-  else 
-    System("mkdir "*ivpdir);
-  end if;
-
-end procedure;
 
 //****************************************
 // TransitionHomotopy Section.
@@ -1551,7 +1563,7 @@ intrinsic LoadBundle(name::MonStgElt : withPeriods:=true) -> Any
   Reads the "bundle" file written under the storage directory with the given name, construct the corresponding PeriodBundle and returns it.
 }
 
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   filename:=ivpdir*"bundle";
   file:=Open(filename,"r");
   bundle:=rec<PeriodBundle | name:=name >;
