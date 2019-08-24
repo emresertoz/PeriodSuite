@@ -1,3 +1,6 @@
+#### The following is adapted from
+#### https://gitlab.inria.fr/lairez/numperiods
+#### with the permission of Pierre Lairez
 
 from sage.geometry.voronoi_diagram import VoronoiDiagram
 
