@@ -1,8 +1,36 @@
 // load period-suite
-load "suite.mag";
+Attach("suite.mag");
+
+
+function randomHomPoly(ring,deg : coefSize:=10, sparse:=0)
+    mons:=MonomialsOfDegree(ring,deg);
+    if sparse gt 0 then
+        mons:=IndexedSetToSet(MonomialsOfDegree(ring,deg));
+        mons:=SetToSequence(RandomSubset(mons,sparse));
+    end if;
+    repeat
+        p:=&+[Random([-coefSize..coefSize])*mon : mon in mons];
+    until not p eq 0;
+    return p;
+end function;
+
+function smoothPolynomial(ring,deg : coefSize:=10, sparse:=5, verbose:=false)
+    attemptNo:=0;
+    repeat
+        f:=randomHomPoly(ring,deg : sparse:=sparse, coefSize:=coefSize);
+        if verbose then
+            attemptNo+:=1;
+            print "Attempt number:",attemptNo;
+            print "f=",f;
+        end if;
+    until not IsSingular(Scheme(Proj(ring),f));
+    return f;
+end function;
+
 
 // Generate a smooth quartic
-f:=smoothHypersurface(P,4);
+P<x,y,z,w> := PolynomialRing(Rationals(),4);
+f:=smoothPolynomial(P,4 : sparse:=4);
 
 // Compute a path of deformation, compatible cohomology bases at each step, find Picard-Fuchs equations, determine initial conditions, write to a Sage readable file (current.sage)
 time ph:=PeriodHomotopy([f]);
@@ -166,8 +194,8 @@ x^5 + x*z*w^3 + y^5 + z^4*w
 ];
 
 
+// This example presently does not finish computing within an hour.
 // Curve of high genus
-load "suite.mag";
 P<x,y,z>:=PolynomialRing(Rationals(),3);
 u:=20;
 f:=x^(3*u)+y^(3*u)+z^(3*u)+x^u*y^u*z^u;

@@ -1,5 +1,10 @@
-pathToSuite="/Users/sertoez/git-projects/suite/";
-load(pathToSuite+"ivpdir.sage")
+pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+
+# Magma source has been changed so that the Temp-directory is sent via the System call.
+# This enables us to specify the load directory from a sage application, as well as prevent
+# a concurrency issue.
+""" Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
+
 ncpus=100
 
 print("Beginning integration...")
@@ -14,6 +19,7 @@ field=ComplexBallField(bit_precision)
 
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
+    print("Old script: Core initiated")
     load(ode_label)
     if loop_position > -1:
         return integrate_ode_with_loop(ode_label)

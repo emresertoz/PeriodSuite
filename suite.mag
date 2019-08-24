@@ -1,4 +1,15 @@
-pathToSuite:="/Users/sertoez/git-projects/suite/";
+pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+
+//************************************************************************************************
+// Global constants.
+//************************************************************************************************
+
+SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
+
+//************************************************************************************************
+// Directory management and File I/O
+//************************************************************************************************
+
 
 intrinsic PathToSuite() -> MonStgElt
 { Returns the directory of period-suite. }
@@ -19,9 +30,10 @@ intrinsic PeriodSuiteStorageDir(:subfolder:="") -> MonStgElt
   end if;
 end intrinsic;
 
-intrinsic PeriodSuiteTempDir(:subfolder:="") -> MonStgElt
+intrinsic IVPWorkingDir(:subfolder:="") -> MonStgElt
 {
- Returns the directory for temp files of period-suite. 
+Returns either the directory for temp files of period-suite or, if subfolder is specified,
+the directory to the identified subfolder.
 }
   if #subfolder eq 0 then
     return PathToSuite()*"ode_storage/incinerator/";
@@ -35,7 +47,7 @@ intrinsic WriteInsideTempFolder(filename::MonStgElt, string::MonStgElt : Overwri
   Writes the string to filename inside the appropriate folder within period-suite. Takes care of line breaking issues.
 }
   cols := GetColumns();
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   target:=ivpdir*filename;
   SetColumns(0);
   if (#name gt 0) and createFolder then
@@ -58,6 +70,34 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
   SetColumns(cols);
 end intrinsic;
 
+procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
+    
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+
+  // Unix conditional check to see if directory exists and if it is safe to overwrite.
+  if System("[ -d "*ivpdir*" ]") eq 0 then
+
+    error if System("[ -f "*ivpdir*SAFEOVERWRITECODE*" ]" ) ne 0,
+	     "Safe overwrite file: '"*SAFEOVERWRITECODE*"' does not exist in directory. "*
+	     "If you *really* want `rm -fr *` to run in this directory, create this file "*
+	     "and try again.";
+
+    error if not overwrite, "folder name already exists, change 'name' or set 'overwrite:=true'";
+    System("rm -fr "*ivpdir * "*");
+    System("touch "*ivpdir*SAFEOVERWRITECODE); // Reset the safe overwrite file.
+  else 
+    System("mkdir "*ivpdir);
+    System("touch "*ivpdir*SAFEOVERWRITECODE);
+  end if;
+
+end procedure;
+
+
+//************************************************************************************************
+// Fermat polynomial construction methods
+//************************************************************************************************
+
 intrinsic Fermat(n::RngIntElt,d::RngIntElt : type:=[1 : i in [1..n+2]], P:=PolynomialRing(Rationals(),n+2)) -> RngMPolElt
 { Returns the polynomial of a Fermat hypersurface of dimension n and of degree d}
   return &+[ type[i]*P.i^d : i in [1..Ngens(P)]];
@@ -67,6 +107,12 @@ intrinsic Fermat(P::RngMPol,d::RngIntElt : type:=[1 : i in [1..Ngens(P)]]) -> Rn
 { Returns the Fermat polynomial degree d in the polynomial ring P}
   return &+[ type[i]*P.i^d : i in [1..Ngens(P)]];
 end intrinsic;
+
+
+
+//************************************************************************************************
+// Picard-Fuchs related functions.
+//************************************************************************************************
 
 // input: 
 // L a nested list of polynomials
@@ -319,6 +365,11 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   return PFeqns;
 
 end intrinsic;
+
+//************************************************************************************************
+// Cohomology basis functions.
+//************************************************************************************************
+
 
 // pole_order_bound if non-zero constructs a cohomology basis which, using Griffiths residues, has pole order at most "pole_order_bound"
 intrinsic CompatibleCohomologyBasis(f0::RngMPolElt,f1::RngMPolElt : pole_order_bound:=0) -> SeqEnum
@@ -595,6 +646,11 @@ intrinsic LocalBasis(ode::RngUPolElt) -> SeqEnum
   return Reverse(exps); 
 end intrinsic;
 
+
+//************************************************************************************************
+// Functions to compute derivatives of forms.
+//************************************************************************************************
+
 intrinsic DifferentiateForm(numerator::RngMPolElt,f0::RngMPolElt,f1::RngMPolElt) -> RngMPolElt
 {
  Differentiates the form numerator*Omega/((1-t)*f0 + t*f1)^l, and outputs the new numerator.
@@ -644,6 +700,15 @@ intrinsic Analytics(ODEs::SeqEnum) -> SeqEnum
 }
   return [Analytics(odes) : odes in ODEs];
 end intrinsic;
+
+
+ 
+//************************************************************************************************
+//
+// Functions for solving Initial Value Problems (IVPs).
+//
+//************************************************************************************************
+
 
 // initial value problems
 IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
@@ -755,6 +820,14 @@ intrinsic ConstructAndWriteIVPs(f0::RngMPolElt, f1::RngMPolElt : pole_order_boun
   return B;
 
 end intrinsic;
+
+
+
+//************************************************************************************************
+//
+// Stuff....
+//
+//************************************************************************************************
 
 
 intrinsic LatticeOfRelations(periodMatrix,precision::RngIntElt : offset:=20, Delta:=0.9999, Eta:=0.5001, DeepInsertions:=false, Proof:=false, ForceRelation:=false) -> RngIntElt, SeqEnum
@@ -1141,7 +1214,7 @@ intrinsic suffix(number::RngIntElt,  max_number::RngIntElt) -> MonStgElt
   return Sprint(10^digits+number)[2..(digits+1)];
 end intrinsic;
 
-intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
+intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="", singular_locus:=false)
 {
   Writes the output of ConstructIVPs in a format readable by Sage.
 }
@@ -1158,12 +1231,19 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="")
   
   for i in [1..#E`ODEs] do
     ode_filename:="IVP-"*suffix(number,max_number)*"-"*suffix(i,#E`ODEs)*".sage";
-    WriteInsideTempFolder(ode_filename,"ode="*Sprint(E`ODEs[i]) : Overwrite:=true,name:=name);
-    WriteInsideTempFolder(ode_filename,"init="*Sprint(E`inits[i]):name:=name);
+      
+    WriteInsideTempFolder(ode_filename, "ode="  *Sprint(E`ODEs[i])  : Overwrite:=true,name:=name);
+    WriteInsideTempFolder(ode_filename, "init=" *Sprint(E`inits[i]) : name:=name);
+
     //WriteInsideTempFolder(ode_filename,"precision="*Sprint(E`precision):name:=name);
-    WriteInsideTempFolder(ode_filename,"path="*Sprint(E`integrationPath):name:=name);
-    WriteInsideTempFolder(ode_filename,"label=("*Sprint(number)*","*Sprint(i)*")":name:=name);
-    WriteInsideTempFolder(ode_filename,"loop_position="*Sprint(E`loop_position):name:=name);
+
+    WriteInsideTempFolder(ode_filename, "path="   *Sprint(E`integrationPath)        : name:=name);
+    WriteInsideTempFolder(ode_filename, "label=(" *Sprint(number)*","*Sprint(i)*")" : name:=name);
+    WriteInsideTempFolder(ode_filename, "loop_position=" *Sprint(E`loop_position)   : name:=name);
+
+    if Type(singular_locus) ne BoolElt then
+      WriteInsideTempFolder(ode_filename,"singular_locus="*Sprint(singular_locus) : name:=name);
+    end if;
   end for;
 
   // not required
@@ -1237,19 +1317,8 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   end if;
 
   beginningTime:=Realtime();
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-  // if no name has been specified then set overwrite to true and clear ivpdir
-  overwrite:=overwrite or (#name eq 0);
-  // check if ivpdir exists
-  if System("[ -d "*ivpdir*" ]") eq 0 then
-    if overwrite then
-      System("rm -fr "*ivpdir*"*");
-    else
-      error "folder name already exists, change 'name' or set 'overwrite:=true'";
-    end if;
-  else 
-    System("mkdir "*ivpdir);
-  end if;
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
@@ -1326,6 +1395,154 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
 end intrinsic;
 
 
+//****************************************
+// TransitionHomotopy Section.
+
+// Input: f0,f1
+// Output: A list of polynomials whose roots specify the values of t
+// for which (1-t)*f0 + t*f1 is singular. Usually this is just the list [1].
+//
+function SingularLocusInFamily(f0,f1)
+    P := Parent(f0);
+    R<t> := PolynomialRing(Rationals(), Ngens(P)+1, "elim", 1);
+    inc := hom<P->R|[R.i : i in [2..Ngens(R)]]>;
+    
+    F  := (1-t)*inc(f0)+t*inc(f1);
+    I  := ideal<R|[Derivative(F,i): i in [2..Ngens(R)]]>;
+    J  := ideal<R|[R.i : i in [2..Ngens(R)]]>;
+
+    IJ := Saturation(I,J);
+    gb := GroebnerBasis(IJ);
+    polys :=[p : p in gb | IsUnivariate(p,t)];
+    return polys;
+end function;
+
+intrinsic TransitionHomotopy(path::[RngMPolElt] :
+			     precision:=100, straight:=false,
+			     bound_pole_order:=false,
+			     pathfinder:=0, integrationPaths:=[],
+			     reduce_initials:=true, name:="",
+			     overwrite:=false, integrate:=true) -> Any
+{
+    Computes the transition matrices needed to carry periods from paths[1] to paths[#paths].
+}
+  // NOTE: integration paths here means the list of quartics to get from start to finish,
+  //       instead of the real contor inside a P1 used to compute the transition matrices.
+
+  if #path eq 1 then
+    error "Transition Homotopy needs start and endpoint as input. Perhaps you meant PeriodHomotopy?";
+  end if;
+
+  beginningTime:=Realtime();
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
+
+  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name);
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+  
+  // either the right number of integrationPaths should be provided, or none at all
+  if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
+  assert #integrationPaths eq #path-1; 
+
+
+  target:=path[#path]; 
+  target_is_smooth:=isSmooth(target);
+  P:=Parent(target);
+  n:=Ngens(P)-2;
+  d:=Degree(target); 
+  if d eq 1 then
+    error "Degree of the hypersurface needs to be greater than one.";
+  end if;
+
+  // bounding the pole order of cohomology classes for the target hypersurface accelerates
+  // the procedure, while providing complete information on the Hodge decomposition
+  // but we can only bound pole order, if there is non-zero classes outside of H^{n/2,n/2}
+  if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
+  pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
+
+  allODEs:=[];
+  tstart:=Realtime();
+  for i in [1..(#path-1)] do
+      print "\n\n************************************\nWe are at family number",i,
+	    "out of",#path-1,"\n************************************\n";
+
+      pob:=0; // pole order bound
+      f1_is_smooth:=target_is_smooth;
+      
+      ivps:=ConstructIVPs(path[i],path[i+1] :
+			  pathfinder:=pathfinder, family_number:=i,
+			  integrationPath:=integrationPaths[i],
+			  pole_order_bound:=pole_order_bound,
+			  reduce_initials:=reduce_initials,
+			  precision:=precision,
+			  f1_is_smooth:=f1_is_smooth);
+      
+      Append(~allODEs,ivps`ODEs);
+
+      slocus := SingularLocusInFamily(path[i],path[i+1]);
+      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1,
+			     name:=name, singular_locus := slocus);
+
+  end for;
+
+  // define a period bundle
+  bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d,
+			     primitiveIntersectionMatrix:="", phamBasis:="",
+			     odes:=allODEs,
+			     deformation:=path, cohomBasis:=ivps`movingBasis,
+			     name:=name >;
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n",
+	 Realtime()-tstart;
+
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  if integrate then
+    print "Starting integration.\n\n";
+    bundle:=SolveTransitionIVPs(bundle);
+  end if;
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+
+  pathMons:=[#Monomials(p) : p in path];
+  pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
+  print "Used the following path:",path;
+  print "The number of monomials appearing at each step:\n",pathMons;
+  print "The number of monomials changed at each step:\n",pathMonsChange;
+
+  if #name gt 0 then SaveBundle(bundle); end if;
+
+  return bundle, ivpdir;
+end intrinsic;
+
+intrinsic SolveTransitionIVPs(bundle::Any) -> Any
+{
+    Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
+}
+  name:=bundle`name;
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+
+  /* cols := GetColumns(); */
+  /* SetColumns(0); */
+  /* print "\n\nStarting SageMath, this may take some time...\n\n"; */
+  /* Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true); */
+  /* SetColumns(cols); */
+
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+
+  // Format command string. Remember that command strings need quotes.
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir,
+			PathToSuite()*"transition-integrator.sage");
+
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  return bundle;
+end intrinsic;
+
+
+//****************************************  End TransitionHomotopy Section.
+
 intrinsic SolveIVPs(name::MonStgElt) -> Any
 {
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
@@ -1342,13 +1559,17 @@ intrinsic SolveIVPs(bundle::Any) -> Any
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
   name:=bundle`name;
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
-  cols := GetColumns();
-  SetColumns(0);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-  SetColumns(cols);
-  System("$(which sage) "*PathToSuite()*"integrator.sage");
+  //cols := GetColumns();
+  // SetColumns(0);
+  // Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
+  //SetColumns(cols);
+
+  // Format command string. Remember that command strings need quotes. 
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
 
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
@@ -1371,12 +1592,13 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 
 end intrinsic;
 
+
 intrinsic LoadBundle(name::MonStgElt : withPeriods:=true) -> Any
 {
   Reads the "bundle" file written under the storage directory with the given name, construct the corresponding PeriodBundle and returns it.
 }
 
-  ivpdir:=PeriodSuiteTempDir(:subfolder:=name);
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
   filename:=ivpdir*"bundle";
   file:=Open(filename,"r");
   bundle:=rec<PeriodBundle | name:=name >;
