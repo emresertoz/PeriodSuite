@@ -70,6 +70,24 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
   SetColumns(cols);
 end intrinsic;
 
+intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=false)
+{ Writes the meta file in the initial value problem directory.}
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision) : name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))   : name:=name);
+  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)       : name:=name);
+  
+  if first_of_path_is_fermat then
+      WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])) : name:=name);
+  end if;
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+
+  // Finally, write the path as a string, to give a redundant internal directoy for safety.
+  triplequote := "\"\"\"";
+  WriteInsideTempFolder("meta.sage", "path_string = " * triplequote * Sprint(path) * triplequote);
+  
+end intrinsic;
+
 procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
     
   // if no name has been specified then set overwrite to true and clear ivpdir
@@ -1320,10 +1338,11 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=true);
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1437,10 +1456,12 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials);
+  
+  /* WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
