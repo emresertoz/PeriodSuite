@@ -84,7 +84,8 @@ intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_i
 
   // Finally, write the path as a string, to give a redundant internal directoy for safety.
   triplequote := "\"\"\"";
-  WriteInsideTempFolder("meta.sage", "path_string = " * triplequote * Sprint(path) * triplequote);
+  WriteInsideTempFolder("meta.sage", "path_string = " * triplequote * Sprint(path) * triplequote
+			: name:=name);
   
 end intrinsic;
 
