@@ -5,7 +5,7 @@ pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 # a concurrency issue.
 """ Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
 
-load("voronoi_path.sage")
+load(pathToSuite + "voronoi_path.sage")
 
 import time
 import pickle
@@ -124,8 +124,6 @@ for file in os.listdir(ivpdir):
     elif file.startswith("BaseChange-") and file.endswith(".sage"):
         basis_change_files.append(os.path.join(ivpdir,file))
 
-# TODO: Sorting will  go badly wrong if there are >=10 base-change files...
-#       Should be fixed.
 ivps.sort()
 basis_change_files.sort()
 
