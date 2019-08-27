@@ -127,6 +127,10 @@ for file in os.listdir(ivpdir):
 ivps.sort()
 basis_change_files.sort()
 
+if len(ivps) == 0:
+    print("No IVPs found in directory: {}.".format(ivpdir))
+    exit(1)
+
 
 ## The most time consuming part: where the solutions are actually tracked.
 if __name__ == '__main__':    
