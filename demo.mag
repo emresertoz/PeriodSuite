@@ -3,6 +3,7 @@ f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
 
 // finding the ODEs for the periods
 time X:=PeriodHomotopy(f);
+// time X:=PeriodHomotopy(f : bound_pole_order:=false);
 
 // after the ODEs have been integrated, we can compute the Hodge lattice
 X:=HodgeLattice(X);
