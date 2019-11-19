@@ -46,7 +46,7 @@ DOP, t, D     = DifferentialOperators()
 bit_precision = ceil(log(10^(precision+10))/log(2))+100
 field         = ComplexBallField(bit_precision)
 
-load("arb_matrix_cerial_wrap.sage")
+load("arb_matrix_cereal_wrap.sage")
 
 # class ARBMatrixCerealWrap:
 #     """
