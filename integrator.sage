@@ -1,4 +1,4 @@
-pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+pathToSuite="/Users/sertoez/git-projects/suite/";
 
 # Magma source has been changed so that the Temp-directory is sent via the System call.
 # This enables us to specify the load directory from a sage application, as well as prevent
@@ -19,12 +19,13 @@ field=ComplexBallField(bit_precision)
 
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
-    print("Old script: Core initiated")
+    #print("Old script: Core initiated")
     load(ode_label)
     if loop_position > -1:
         return integrate_ode_with_loop(ode_label)
     tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
-    print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
+    #print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
+    print "ODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)

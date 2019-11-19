@@ -1,4 +1,4 @@
-pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
+pathToSuite:="/Users/sertoez/git-projects/suite/";
 
 //************************************************************************************************
 // Global constants.
@@ -2729,9 +2729,10 @@ intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
   return [p/point[i] : p in point];
 end intrinsic;
 
-//*****************************************************************************************
-// Picard numbers for 4-monomial hypersurfaces combinatorially. These serve as the first line
-// of testing.
+
+//************************************************************************************************
+// Shioda's computation of the Picard numbers for Delsarte surfaces, used for testing mainly
+//************************************************************************************************
 
 intrinsic picardNumberOfDelsarte(f::RngMPolElt) -> RngIntElt
 {
@@ -2760,6 +2761,7 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   // The polynomial is not divisible by a coordinate function
   // equivalently, for each j, at least one row has a zero at j-th column
   assert &and[&or[A[i,j] eq 0 : i in [1..4]] : j in [1..4]];
+
   // The rest of the setup as in Shioda's paper:
   // "An explicit algorithm for computing the Picard number of certain surfaces"
   adjA:=Adjoint(A);
@@ -2781,3 +2783,4 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   lambda:=#IcapLA;
   return (m-1)*(m^2-3*m+3)+1-lambda;
 end intrinsic;
+
