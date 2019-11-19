@@ -1756,20 +1756,30 @@ intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
 {
   Parses the output of integration.
 }
-  file:=Open(filename,"r");
+file:=Open(filename,"r");
+
+  // read precision
   s:=Gets(file);
   precision:=eval s;
+
+  // read the storage precision for the arb matrix.
   s:=Gets(file);
   CC<I>:=ComplexField(eval s);
   old_prec:=Precision(GetDefaultRealField());
   SetDefaultRealFieldPrecision(eval s);
+
+  // Read the periods from the file.
   primitive:=[];
   s:=Gets(file);
   while not IsEof(s) do
     Append(~primitive,eval(s));
     s:=Gets(file);
   end while;
+
+  // Resent the default real field precision.
   SetDefaultRealFieldPrecision(old_prec);
+
+  // Return the period matrix and the precision.
   return Matrix(primitive), precision;
 end intrinsic;
 
@@ -2717,4 +2727,51 @@ intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
     if i gt #point then return [Parent(point[1])|0 : i in [1..#point]]; end if;
   until Abs(point[i]) gt 10^-(Floor(precision/2));
   return [p/point[i] : p in point];
+end intrinsic;
+
+intrinsic picardNumberOfDelsarte(f::RngMPolElt) -> RngIntElt
+{
+  Compute the Picard number of a Delsarte surface whose exponents are defined by the 4x4 integral matrix A.
+}
+  mons:=Monomials(f);
+  assert #mons eq 4;
+  A:=Matrix([ Exponents(m) : m in mons]);
+  return picardNumberOfDelsarte(A);
+end intrinsic;
+
+intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
+{
+  Compute the Picard number of a Delsarte surface whose exponents are defined by the 4x4 integral matrix A.
+}
+  // Checking Delsarte conditions for a surface
+  // A is a 4x4 matrix with non-negative entries
+  assert (Ncols(A) eq 4) and (Nrows(A) eq 4);
+  assert &and[(a in Integers()) and (a ge 0) : a in Eltseq(A)];
+  // Sums of rows of A is constant (the corresponding poly is hom)
+  m:=&+Eltseq(A[1]);
+  assert &and[&+Eltseq(A[i]) eq m : i in [1..4]];
+  // The matrix is invertible
+  detA:=Determinant(A);
+  assert detA ne 0;
+  // The polynomial is not divisible by a coordinate function
+  // equivalently, for each j, at least one row has a zero at j-th column
+  assert &and[&or[A[i,j] eq 0 : i in [1..4]] : j in [1..4]];
+  // The rest of the setup as in Shioda's "An explicit algorithm for computing the Picard number of certain surfaces"
+  adjA:=Adjoint(A);
+  delta:=GCD(Eltseq(adjA));
+  assert delta gt 0; // just making sure GCD does the right thing
+  d:=Integers()!(Abs(detA)/delta);
+  Ainv:=1/detA*adjA;
+  B:=ChangeRing(d*Ainv,Integers());
+  Rd:=Integers(d);
+  Md:=Kernel(Matrix([[Rd|1] : i in [1..4]]));
+  LA:=Image(ChangeRing(B,Rd));
+  // For computational efficiency we do not construct Ad or Bd explicitly
+  Ad:={! m in Md | &and[ mi ne 0 : mi in Eltseq(m)] !};
+  tset:={t : t in [1..d] | GCD(t,d) eq 1};
+  // Bd should really consist of entries in Ad, instead of Md, but for the construction of IcapLA this doesn't matter.
+  Bd:={! m in Md | &and[&+ChangeUniverse(Eltseq(t*m),Integers()) eq 2*d  : t in tset] !};
+  IcapLA:={m : m in LA | (m in Ad) and (not m in Bd)};
+  lambda:=#IcapLA;
+  return (m-1)*(m^2-3*m+3)+1-lambda;
 end intrinsic;
