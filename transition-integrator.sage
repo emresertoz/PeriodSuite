@@ -178,7 +178,7 @@ def ith_compatible_matrix(i):
 ## Write to file.
 print "Rearranging the matrices. Writing to file..."
 
-with open(ivpdir+"transition_mat.sobj",'w') as  outfile:
+with open(ivpdir+"transition_mat.sobj",'w') as outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
 
