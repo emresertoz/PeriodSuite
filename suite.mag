@@ -2696,6 +2696,7 @@ intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
   until Abs(point[i]) gt 10^-(Floor(precision/2));
   return [p/point[i] : p in point];
 end intrinsic;
+
 //************************************************************************************************
 // Shioda's computation of the Picard numbers for Delsarte surfaces, used for testing mainly
 //************************************************************************************************
@@ -2748,3 +2749,34 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   return (m-1)*(m^2-3*m+3)+1-lambda;
 end intrinsic;
 
+
+//************************************************************************************************
+// Computing transition matrices of periods for GL-translates of hypersurfaces
+//************************************************************************************************
+
+intrinsic translate_polynomial(A::AlgMatElt,p::RngMPolElt) -> RngMPolElt
+{
+  Here A acts on Pn the points, hence Atranspose acts on p. Vieweing p as a function on the row (x0,..,xn) we map p to the poly p((x0,..,xn)*Atranspose).
+}
+  return Evaluate(p,Eltseq(Matrix([[Parent(p).i : i in [1..Ngens(Parent(p))]]])*ChangeRing(Transpose(A),Parent(p))));
+end intrinsic;
+
+intrinsic translate_form(A::AlgMatElt,p::RngMPolElt) -> RngMPolElt
+{
+  For the the linear map Pn -> Pn given by A, we have a pullback on meramorphic forms. Especially those of type p*Omega/f^l pullback to q*Omega/g^l. Given p we return q. 
+}
+  return Determinant(A)*translate_polynomial(A,p);
+end intrinsic;
+
+intrinsic translate_period_matrix(A::AlgMatElt,f::RngMPolElt) -> RngMPolElt
+{
+  Let g=translate_polynomial(A,f) be the translate of f. This function outputs a matrix M such that if P is a period matrix for the hypersurface Z(f) with respect to the grevlex cohom basis for f, then M*P is the grevlex period matrix for Z(g).
+}
+  // Idea: Send the homology basis on Z(f) via A, and send the cohom basis via pullback using Ainv
+  // Now the period matrix of Z(f) and Z(g) agree. We express the grevlex basis on g in terms of the Ainv pullback cohom basis to compute M.
+  g:=translate_polynoial(Determinant(A)*Adjoint(A),f);
+  grevlex_basis:=ComputeCohomologyBasis(g : order:="grevlex"); 
+  translate_basis:=[translate_form(p)  : p in ComputeCohomologyBasis(f : order:="grevlex")]; 
+  N:=CoordinatesInCohomology(g,translate_basis,grevlex_basis);
+  return Determinant(N)*Adjoint(N);
+end intrinsic;
