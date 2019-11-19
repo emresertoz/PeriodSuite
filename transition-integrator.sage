@@ -42,9 +42,10 @@ print("Beginning integration...")
 # reduce
 load(ivpdir+"meta.sage")
 
-DOP, t, D     = DifferentialOperators()
-bit_precision = ceil(log(10^(precision+10))/log(2))+100
-field         = ComplexBallField(bit_precision)
+DOP, t, D       = DifferentialOperators()
+digit_precision = precision
+bit_precision   = ceil(log(10^(precision+10))/log(2))+100
+field           = ComplexBallField(bit_precision)
 
 load("arb_matrix_cereal_wrap.sage")
 
@@ -182,5 +183,6 @@ with open(ivpdir+"transition_mat.sobj",'w') as outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
 
+    #TODO: Also save the digit_precision somewhere sensible.
 
 exit()
