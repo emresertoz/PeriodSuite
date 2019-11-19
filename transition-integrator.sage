@@ -5,6 +5,26 @@ pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 # a concurrency issue.
 """ Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
 
+### TIMEOUT SUPPORT ###
+#
+# If `timeout` is set via command line, the process will self-destruct after the set time.
+
+import sys
+import signal
+
+class Alarm(Exception):
+    pass
+
+def alarm_handler(signum, frame):
+    sys.exit(1)
+
+try:
+    signal.signal(signal.SIGALRM, alarm_handler)
+    signal.alarm(timeout)
+except NameError:
+    pass
+
+
 load(pathToSuite + "voronoi_path.sage")
 
 import time
@@ -26,24 +46,27 @@ DOP, t, D     = DifferentialOperators()
 bit_precision = ceil(log(10^(precision+10))/log(2))+100
 field         = ComplexBallField(bit_precision)
 
-class ARBMatrixCerealWrap:
-    """
-    A wrapper class to enable serialization of complex arb matrix objects. The original arb matrix
-    can be constructed via the `arb_matrix` method.
-    """
-    def __init__(self, arb_mat):
-        self.nrows = arb_mat.nrows()
-        self.ncols = arb_mat.ncols()
-        self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
+load("arb_matrix_cerial_wrap.sage")
 
-    def ball_field_elem(self, x):
-        return field(x[0]).add_error(x[1])
+# class ARBMatrixCerealWrap:
+#     """
+#     A wrapper class to enable serialization of complex arb matrix objects. The original arb matrix
+#     can be constructed via the `arb_matrix` method.
+#     """
+#     def __init__(self, arb_mat):
+#         self.nrows = arb_mat.nrows()
+#         self.ncols = arb_mat.ncols()
+#         self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
+#         self.base_ring = arb_matrix.base_ring()
+
+#     def ball_field_elem(self, x):
+#         return field(x[0]).add_error(x[1])
     
-    def arb_matrix(self):
-        return matrix(field, self.nrows , self.ncols, map(self.ball_field_elem, self.arb_entries)  )
+#     def arb_matrix(self):
+#         return matrix(self.field, self.nrows , self.ncols, map(self.ball_field_elem, self.arb_entries)  )
         
-    def list(self):
-        return self.arb_entries
+#     def list(self):
+#         return self.arb_entries
 
 """
 An ode label is of the form (step_number, equation_number). The (i,j)-th equation is the $j$-th ode
@@ -129,7 +152,7 @@ basis_change_files.sort()
 
 if len(ivps) == 0:
     print("No IVPs found in directory: {}.".format(ivpdir))
-    exit(1)
+    sys.exit(1)
 
 
 ## The most time consuming part: where the solutions are actually tracked.
@@ -155,6 +178,9 @@ def ith_compatible_matrix(i):
 ## Write to file.
 print "Rearranging the matrices. Writing to file..."
 
-with open(ivpdir+"transition_mat",'w') as  outfile:
+with open(ivpdir+"transition_mat.sobj",'w') as  outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
+
+
+exit()
