@@ -47,7 +47,7 @@ digit_precision = precision
 bit_precision   = ceil(log(10^(precision+10))/log(2))+100
 field           = ComplexBallField(bit_precision)
 
-load("arb_matrix_cereal_wrap.sage")
+load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
 # class ARBMatrixCerealWrap:
 #     """

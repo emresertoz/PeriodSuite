@@ -8,7 +8,7 @@ class ARBMatrixCerealWrap:
         self.nrows = arb_mat.nrows()
         self.ncols = arb_mat.ncols()
         self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
-        self.base_ring = arb_matrix.base_ring()
+        self.base_ring = arb_mat.base_ring()
 
     def ball_field_elem(self, x):
         return self.field(x[0]).add_error(x[1])
