@@ -180,7 +180,15 @@ if __name__ == '__main__':
 def ith_compatible_matrix(i):
     # File contains `change_coordinates`
     load(basis_change_files[i])
-    tm =  matrix( field, [tms[k].list() for k in tms.keys() if k[0] == i+1] )
+
+    # Complex ball fields will interpret `field([a,b])` as an interval. We ned to parse
+    # the element correctly first before coercing it into the complex ball field.
+    tm =  matrix( field, [tms[k].list() for k in sorted(tms.keys()) if k[0] == i+1] )
+
+    print tm.row(0)
+
+    print change_coordinates
+    
     return change_coordinates*tm
 
 ## Write to file.
@@ -189,9 +197,13 @@ print "Rearranging the matrices. Writing to file..."
 with open(ivpdir+"transition_mat.sobj",'w') as outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
 
-    print ARBMatrixCerealWrap(total_transition_mat).arb_entries
+    print ith_compatible_matrix(0)
+
+    print tms.keys()
+    
+    print ARBMatrixCerealWrap(total_transition_mat).arb_entries[0]
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
 
     #TODO: Also save the digit_precision somewhere sensible.
 
-exit()
+#exit()

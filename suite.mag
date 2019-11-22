@@ -2814,3 +2814,50 @@ intrinsic translate_period_matrix(A::AlgMatElt,f::RngMPolElt) -> RngMPolElt
   N:=CoordinatesInCohomology(g,translate_basis,grevlex_basis);
   return Determinant(N)*Adjoint(N);
 end intrinsic;
+
+intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, straight:=false,  pathfinder:=0, integrationPath:=[0,1], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any,Any
+{
+  Returns the period transition matrix from f0 to f1 and its precision in digits. The period transition matrix is the matrix M such that if P is a period matrix of f0 w.r.t. grevlex cohomology basis than M*P is a period matrix of f1 w.r.t. grevlex cohomology basis.
+}
+  bound_pole_order:=false;
+  assert Degree(f0) eq Degree(f1);
+  assert isSmooth(f0);
+  assert isSmooth(f1);
+
+  beginningTime:=Realtime();
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(f0)):name:=name);
+  //WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","reduce=false":name:=name); // this will allow us not to compute periods of fermat
+  
+  target:=f1;
+  target_is_smooth:=true;
+  P:=Parent(target);
+  n:=Ngens(P)-2;
+  d:=Degree(target); 
+  if d eq 1 then
+    error "Degree of the hypersurface needs to be greater than one.";
+  end if;
+
+  odes:=[];
+  tstart:=Realtime();
+  ivps:=ConstructIVPs(f0,f1: pathfinder:=pathfinder, family_number:=1, integrationPath:=integrationPath, pole_order_bound:=0,precision:=precision, f1_is_smooth:=true);
+  WriteIVPsToFile(ivps : number:=1, max_number:=1, name:=name);
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
+
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  primitivePeriods,precision:=loadPeriods(ivpdir*"periods");
+
+  return primitivePeriods, precision;
+end intrinsic;
