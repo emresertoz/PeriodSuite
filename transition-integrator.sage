@@ -109,6 +109,8 @@ def integrate_ode(ode_label):
     
     initial_conditions = Matrix(init)
     path, singpts = voronoi_path(singular_locus)
+
+    path = [0,1];
     
     transition_mat = complex_numerical_transition_matrix(ode, path, precision)
 
@@ -116,12 +118,17 @@ def integrate_ode(ode_label):
     if not is_exact_ring(initial_conditions.base_ring()):
         initial_conditions = initial_conditions.change_ring(transition_mat.base_ring())
 
+    with open("dummy_file_name-"+ode_label[-10:-5], "w") as FF:
+        FF.write(str(transition_mat.row(0)*initial_conditions))
+
+        
     # Status update.
     max_err = max( x.diameter() for x in transition_mat.list() )    
     print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
     transition_row = ARBMatrixCerealWrap(matrix( transition_mat.row(0)*initial_conditions ))
+        
     return [transition_row,False,label] 
 #####
 
@@ -181,6 +188,8 @@ print "Rearranging the matrices. Writing to file..."
 
 with open(ivpdir+"transition_mat.sobj",'w') as outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
+
+    print ARBMatrixCerealWrap(total_transition_mat).arb_entries
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
 
     #TODO: Also save the digit_precision somewhere sensible.
