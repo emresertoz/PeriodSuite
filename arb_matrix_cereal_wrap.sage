@@ -20,3 +20,6 @@ class ARBMatrixCerealWrap:
     def list(self):
         return self.arb_entries
 
+    def entries_as_arbs(self):
+        raw_out_data = self.arb_entries
+        return [self.base_ring(x[0]).add_error(x[1]) for x in raw_out_data]

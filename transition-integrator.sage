@@ -178,17 +178,18 @@ if __name__ == '__main__':
     
 
 def ith_compatible_matrix(i):
+    """Function to align the cohomology basis between steps in the homotopy. """
+
     # File contains `change_coordinates`
     load(basis_change_files[i])
 
     # Complex ball fields will interpret `field([a,b])` as an interval. We ned to parse
     # the element correctly first before coercing it into the complex ball field.
-    tm =  matrix( field, [tms[k].list() for k in sorted(tms.keys()) if k[0] == i+1] )
 
-    print tm.row(0)
-
-    print change_coordinates
-    
+    # Filter the IVP solutions by label, and ensure they are in the correct order.
+    # These form the rows of the transition matrix.
+    entries = [tms[k].entries_as_arbs() for k in sorted(tms.keys()) if k[0] == i+1]
+    tm =  matrix(entries)    
     return change_coordinates*tm
 
 ## Write to file.
@@ -206,4 +207,4 @@ with open(ivpdir+"transition_mat.sobj",'w') as outfile:
 
     #TODO: Also save the digit_precision somewhere sensible.
 
-#exit()
+exit()
