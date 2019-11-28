@@ -2605,7 +2605,6 @@ intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
       return linePairing[i1,i2] eq 1;
     end function;
 
-    print "planar pairs";
     planar_pairs:={lines[i]+lines[j] : i,j in [1..#lines] | lines_intersect(i,j)};
 
     quadrics:=Setseq({ q : q in all_curves[2] | not q in planar_pairs});
