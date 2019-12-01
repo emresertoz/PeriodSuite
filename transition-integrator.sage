@@ -109,8 +109,6 @@ def integrate_ode(ode_label):
     
     initial_conditions = Matrix(init)
     path, singpts = voronoi_path(singular_locus)
-
-    path = [0,1];
     
     transition_mat = complex_numerical_transition_matrix(ode, path, precision)
 

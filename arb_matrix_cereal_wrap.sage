@@ -11,7 +11,7 @@ class ARBMatrixCerealWrap:
         self.base_ring = arb_mat.base_ring()
 
     def ball_field_elem(self, x):
-        return self.field(x[0]).add_error(x[1])
+        return self.base_ring(x[0]).add_error(x[1])
     
     def arb_matrix(self):
         return matrix(self.base_ring, self.nrows , self.ncols,
