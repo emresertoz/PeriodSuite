@@ -5,7 +5,27 @@ pathToSuite="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 # a concurrency issue.
 """ Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
 
-load("voronoi_path.sage")
+### TIMEOUT SUPPORT ###
+#
+# If `timeout` is set via command line, the process will self-destruct after the set time.
+
+import sys
+import signal
+
+class Alarm(Exception):
+    pass
+
+def alarm_handler(signum, frame):
+    sys.exit(1)
+
+try:
+    signal.signal(signal.SIGALRM, alarm_handler)
+    signal.alarm(timeout)
+except NameError:
+    pass
+
+
+load(pathToSuite + "voronoi_path.sage")
 
 import time
 import pickle
@@ -22,28 +42,32 @@ print("Beginning integration...")
 # reduce
 load(ivpdir+"meta.sage")
 
-DOP, t, D     = DifferentialOperators()
-bit_precision = ceil(log(10^(precision+10))/log(2))+100
-field         = ComplexBallField(bit_precision)
+DOP, t, D       = DifferentialOperators()
+digit_precision = precision
+bit_precision   = ceil(log(10^(precision+10))/log(2))+100
+field           = ComplexBallField(bit_precision)
 
-class ARBMatrixCerealWrap:
-    """
-    A wrapper class to enable serialization of complex arb matrix objects. The original arb matrix
-    can be constructed via the `arb_matrix` method.
-    """
-    def __init__(self, arb_mat):
-        self.nrows = arb_mat.nrows()
-        self.ncols = arb_mat.ncols()
-        self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
+load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
-    def ball_field_elem(self, x):
-        return field(x[0]).add_error(x[1])
+# class ARBMatrixCerealWrap:
+#     """
+#     A wrapper class to enable serialization of complex arb matrix objects. The original arb matrix
+#     can be constructed via the `arb_matrix` method.
+#     """
+#     def __init__(self, arb_mat):
+#         self.nrows = arb_mat.nrows()
+#         self.ncols = arb_mat.ncols()
+#         self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
+#         self.base_ring = arb_matrix.base_ring()
+
+#     def ball_field_elem(self, x):
+#         return field(x[0]).add_error(x[1])
     
-    def arb_matrix(self):
-        return matrix(field, self.nrows , self.ncols, map(self.ball_field_elem, self.arb_entries)  )
+#     def arb_matrix(self):
+#         return matrix(self.field, self.nrows , self.ncols, map(self.ball_field_elem, self.arb_entries)  )
         
-    def list(self):
-        return self.arb_entries
+#     def list(self):
+#         return self.arb_entries
 
 """
 An ode label is of the form (step_number, equation_number). The (i,j)-th equation is the $j$-th ode
@@ -91,13 +115,14 @@ def integrate_ode(ode_label):
     # Harmonize base rings.
     if not is_exact_ring(initial_conditions.base_ring()):
         initial_conditions = initial_conditions.change_ring(transition_mat.base_ring())
-
+        
     # Status update.
     max_err = max( x.diameter() for x in transition_mat.list() )    
     print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
     transition_row = ARBMatrixCerealWrap(matrix( transition_mat.row(0)*initial_conditions ))
+        
     return [transition_row,False,label] 
 #####
 
@@ -124,10 +149,12 @@ for file in os.listdir(ivpdir):
     elif file.startswith("BaseChange-") and file.endswith(".sage"):
         basis_change_files.append(os.path.join(ivpdir,file))
 
-# TODO: Sorting will  go badly wrong if there are >=10 base-change files...
-#       Should be fixed.
 ivps.sort()
 basis_change_files.sort()
+
+if len(ivps) == 0:
+    print("No IVPs found in directory: {}.".format(ivpdir))
+    sys.exit(1)
 
 
 ## The most time consuming part: where the solutions are actually tracked.
@@ -145,14 +172,27 @@ if __name__ == '__main__':
     
 
 def ith_compatible_matrix(i):
+    """Function to align the cohomology basis between steps in the homotopy. """
+
     # File contains `change_coordinates`
     load(basis_change_files[i])
-    tm =  matrix( field, [tms[k].list() for k in tms.keys() if k[0] == i+1] )
+
+    # Complex ball fields will interpret `field([a,b])` as an interval. We ned to parse
+    # the element correctly first before coercing it into the complex ball field.
+
+    # Filter the IVP solutions by label, and ensure they are in the correct order.
+    # These form the rows of the transition matrix.
+    entries = [tms[k].entries_as_arbs() for k in sorted(tms.keys()) if k[0] == i+1]
+    tm =  matrix(entries)    
     return change_coordinates*tm
 
 ## Write to file.
 print "Rearranging the matrices. Writing to file..."
 
-with open(ivpdir+"transition_mat",'w') as  outfile:
+with open(ivpdir+"transition_mat.sobj",'w') as outfile:
     total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
     pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
+
+    #TODO: Also save the digit_precision somewhere sensible.
+
+exit()

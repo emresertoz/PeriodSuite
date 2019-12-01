@@ -1,4 +1,4 @@
-pathToSuite:="/Users/sertoez/git-projects/suite/";
+pathToSuite:="/usr/people/avinash/Gauss-Manin/PeriodSuite/";
 
 //************************************************************************************************
 // Global constants.
@@ -68,6 +68,25 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
   SetColumns(0);
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
+end intrinsic;
+
+intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=false)
+{ Writes the meta file in the initial value problem directory.}
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision) : name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))   : name:=name);
+  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)       : name:=name);
+  
+  if first_of_path_is_fermat then
+      WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])) : name:=name);
+  end if;
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+
+  // Finally, write the path as a string, to give a redundant internal directoy for safety.
+  triplequote := "\"\"\"";
+  WriteInsideTempFolder("meta.sage", "path_string = " * triplequote * Sprint(path) * triplequote
+			: name:=name);
+  
 end intrinsic;
 
 procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
@@ -1320,10 +1339,11 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=true);
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1437,10 +1457,12 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials);
+  
+  /* WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1734,20 +1756,30 @@ intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
 {
   Parses the output of integration.
 }
-  file:=Open(filename,"r");
+file:=Open(filename,"r");
+
+  // read precision
   s:=Gets(file);
   precision:=eval s;
+
+  // read the storage precision for the arb matrix.
   s:=Gets(file);
   CC<I>:=ComplexField(eval s);
   old_prec:=Precision(GetDefaultRealField());
   SetDefaultRealFieldPrecision(eval s);
+
+  // Read the periods from the file.
   primitive:=[];
   s:=Gets(file);
   while not IsEof(s) do
     Append(~primitive,eval(s));
     s:=Gets(file);
   end while;
+
+  // Resent the default real field precision.
   SetDefaultRealFieldPrecision(old_prec);
+
+  // Return the period matrix and the precision.
   return Matrix(primitive), precision;
 end intrinsic;
 
@@ -2696,10 +2728,10 @@ intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
   until Abs(point[i]) gt 10^-(Floor(precision/2));
   return [p/point[i] : p in point];
 end intrinsic;
+
 //************************************************************************************************
 // Shioda's computation of the Picard numbers for Delsarte surfaces, used for testing mainly
 //************************************************************************************************
-
 
 intrinsic picardNumberOfDelsarte(f::RngMPolElt) -> RngIntElt
 {
@@ -2728,7 +2760,9 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   // The polynomial is not divisible by a coordinate function
   // equivalently, for each j, at least one row has a zero at j-th column
   assert &and[&or[A[i,j] eq 0 : i in [1..4]] : j in [1..4]];
-  // The rest of the setup as in Shioda's "An explicit algorithm for computing the Picard number of certain surfaces"
+
+  // The rest of the setup as in Shioda's paper:
+  // "An explicit algorithm for computing the Picard number of certain surfaces"
   adjA:=Adjoint(A);
   delta:=GCD(Eltseq(adjA));
   assert delta gt 0; // just making sure GCD does the right thing
@@ -2736,15 +2770,94 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   Ainv:=1/detA*adjA;
   B:=ChangeRing(d*Ainv,Integers());
   Rd:=Integers(d);
-  Md:=Kernel(Matrix([[Rd|1] : i in [1..4]])); 
+  Md:=Kernel(Matrix([[Rd|1] : i in [1..4]]));
   LA:=Image(ChangeRing(B,Rd));
-  // For computational efficiency we do not construct Ad or Bd explicitly 
+  // For computational efficiency we do not construct Ad or Bd explicitly
   Ad:={! m in Md | &and[ mi ne 0 : mi in Eltseq(m)] !};
   tset:={t : t in [1..d] | GCD(t,d) eq 1};
-  // Bd should really consist of entries in Ad, instead of Md, but for the construction of IcapLA this doesn't matter.
+  // Bd should really consist of entries in Ad, instead of Md.
+  // For the construction of IcapLA this doesn't matter.
   Bd:={! m in Md | &and[&+ChangeUniverse(Eltseq(t*m),Integers()) eq 2*d  : t in tset] !};
   IcapLA:={m : m in LA | (m in Ad) and (not m in Bd)};
   lambda:=#IcapLA;
   return (m-1)*(m^2-3*m+3)+1-lambda;
 end intrinsic;
 
+
+//************************************************************************************************
+// Computing transition matrices of periods for GL-translates of hypersurfaces
+//************************************************************************************************
+
+intrinsic translate_polynomial(A::AlgMatElt,p::RngMPolElt) -> RngMPolElt
+{
+  Here A acts on Pn the points, hence Atranspose acts on p. Vieweing p as a function on the row (x0,..,xn) we map p to the poly p((x0,..,xn)*Atranspose).
+}
+  return Evaluate(p,Eltseq(Matrix([[Parent(p).i : i in [1..Ngens(Parent(p))]]])*ChangeRing(Transpose(A),Parent(p))));
+end intrinsic;
+
+intrinsic translate_form(A::AlgMatElt,p::RngMPolElt) -> RngMPolElt
+{
+  For the the linear map Pn -> Pn given by A, we have a pullback on meramorphic forms. Especially those of type p*Omega/f^l pullback to q*Omega/g^l. Given p we return q. 
+}
+  return Determinant(A)*translate_polynomial(A,p);
+end intrinsic;
+
+intrinsic translate_period_matrix(A::AlgMatElt,f::RngMPolElt) -> RngMPolElt
+{
+  Let g=translate_polynomial(A,f) be the translate of f. This function outputs a matrix M such that if P is a period matrix for the hypersurface Z(f) with respect to the grevlex cohom basis for f, then M*P is the grevlex period matrix for Z(g).
+}
+  // Idea: Send the homology basis on Z(f) via A, and send the cohom basis via pullback using Ainv
+  // Now the period matrix of Z(f) and Z(g) agree. We express the grevlex basis on g in terms of the Ainv pullback cohom basis to compute M.
+  g:=translate_polynomial(Determinant(A)*Adjoint(A),f);
+  grevlex_basis:=ComputeCohomologyBasis(g : order:="grevlex"); 
+  translate_basis:=[translate_form(p)  : p in ComputeCohomologyBasis(f : order:="grevlex")]; 
+  N:=CoordinatesInCohomology(g,translate_basis,grevlex_basis);
+  return Determinant(N)*Adjoint(N);
+end intrinsic;
+
+intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, straight:=false,  pathfinder:=0, integrationPath:=[0,1], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any,Any
+{
+  Returns the period transition matrix from f0 to f1 and its precision in digits. The period transition matrix is the matrix M such that if P is a period matrix of f0 w.r.t. grevlex cohomology basis than M*P is a period matrix of f1 w.r.t. grevlex cohomology basis.
+}
+  bound_pole_order:=false;
+  assert Degree(f0) eq Degree(f1);
+  assert isSmooth(f0);
+  assert isSmooth(f1);
+
+  beginningTime:=Realtime();
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(f0)):name:=name);
+  //WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
+  WriteInsideTempFolder("meta.sage","reduce=false":name:=name); // this will allow us not to compute periods of fermat
+  
+  target:=f1;
+  target_is_smooth:=true;
+  P:=Parent(target);
+  n:=Ngens(P)-2;
+  d:=Degree(target); 
+  if d eq 1 then
+    error "Degree of the hypersurface needs to be greater than one.";
+  end if;
+
+  odes:=[];
+  tstart:=Realtime();
+  ivps:=ConstructIVPs(f0,f1: pathfinder:=pathfinder, family_number:=1, integrationPath:=integrationPath, pole_order_bound:=0,precision:=precision, f1_is_smooth:=true);
+  WriteIVPsToFile(ivps : number:=1, max_number:=1, name:=name);
+  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
+
+  ////////////////////////////////////////
+  /// Integration happens here ///////////
+  ////////////////////////////////////////
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+  ivpdir:=IVPWorkingDir(:subfolder:=name);
+  primitivePeriods,precision:=loadPeriods(ivpdir*"periods");
+
+  return primitivePeriods, precision;
+end intrinsic;
