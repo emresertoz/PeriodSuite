@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Set the suite path to a blank default so git is less annoying.
+pathToSuite=""
+suite="suite.mag"
+integrator="integrator.sage"
+t_integrator="transition-integrator.sage"
+
+sed -i.backup "1d" $suite
+sed -i.backup "1i\\
+pathToSuite:=\"${pathToSuite}"/"\";
+" $suite
+
+sed -i.backup "1d" $integrator
+sed -i.backup "1i\\
+pathToSuite=\"${pathToSuite}"/"\";
+" $integrator
+
+sed -i.backup "1d" $t_integrator
+sed -i.backup "1i\\
+pathToSuite=\"${pathToSuite}"/"\";
+" $t_integrator
