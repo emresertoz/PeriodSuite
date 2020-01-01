@@ -3,6 +3,8 @@
 pathToSuite=$(pwd)
 suite="suite.mag"
 integrator="integrator.sage"
+t_integrator="transition-integrator.sage"
+
 
 mkdir -p ${pathToSuite}"/""ode_storage/incinerator";
 mkdir -p ${pathToSuite}"/""fermat_data";
@@ -17,3 +19,8 @@ sed -i.backup "1d" $integrator
 sed -i.backup "1i\\
 pathToSuite=\"${pathToSuite}"/"\";
 " $integrator
+
+sed -i.backup "1d" $t_integrator
+sed -i.backup "1i\\
+pathToSuite=\"${pathToSuite}"/"\";
+" $t_integrator
