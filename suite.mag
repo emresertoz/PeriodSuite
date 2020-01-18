@@ -1373,6 +1373,10 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   >;
   printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
 
+
+  // Integration may crash. Save everything up until this point.
+  if #name gt 0 then SaveBundle(bundle); end if;
+
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
@@ -1388,8 +1392,6 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
-
-  if #name gt 0 then SaveBundle(bundle); end if;
 
   return bundle, ivpdir;
 end intrinsic;
@@ -1496,6 +1498,11 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   printf "\nComputation of the differential equations is now complete (%o seconds).\n\n",
 	 Realtime()-tstart;
 
+
+  // Integration may crash. Save everything up until this point.
+  if #name gt 0 then SaveBundle(bundle); end if;
+
+
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
@@ -1511,8 +1518,6 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
-
-  if #name gt 0 then SaveBundle(bundle); end if;
 
   return bundle, ivpdir;
 end intrinsic;
