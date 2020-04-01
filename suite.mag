@@ -38,7 +38,13 @@ the directory to the identified subfolder.
   if #subfolder eq 0 then
     return PathToSuite()*"ode_storage/incinerator/";
   else 
-    return PathToSuite()*"ode_storage/"*subfolder*"/";
+    if subfolder[#subfolder] ne "/" then subfolder:=subfolder*"/"; end if;
+    if subfolder[1] eq "/" then
+    // Hacky way to force your way out of the root directory
+      return subfolder;
+    else
+      return PathToSuite()*"ode_storage/"*subfolder;
+    end if;
   end if;
 end intrinsic;
 
