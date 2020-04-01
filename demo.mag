@@ -7,8 +7,22 @@ time X:=PeriodHomotopy(f);
 
 // after the ODEs have been integrated, we can compute the Hodge lattice
 X:=HodgeLattice(X);
+X`lat; 
+X`pol;
 
 _:=P1InK3Lattice(X`lat,X`pol);
+
+
+
+
+
+
+
+
+
+
+
+
 
 // the following are not available in period-suite
 LinesInK3Lattice(X`lat,X`pol);

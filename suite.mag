@@ -38,7 +38,13 @@ the directory to the identified subfolder.
   if #subfolder eq 0 then
     return PathToSuite()*"ode_storage/incinerator/";
   else 
-    return PathToSuite()*"ode_storage/"*subfolder*"/";
+    if subfolder[#subfolder] ne "/" then subfolder:=subfolder*"/"; end if;
+    if subfolder[1] eq "/" then
+    // Hacky way to force your way out of the root directory
+      return subfolder;
+    else
+      return PathToSuite()*"ode_storage/"*subfolder;
+    end if;
   end if;
 end intrinsic;
 
@@ -1393,6 +1399,10 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   >;
   printf "\nComputation of the differential equations is now complete (%o seconds).\n\n", Realtime()-tstart;
 
+
+  // Integration may crash. Save everything up until this point.
+  if #name gt 0 then SaveBundle(bundle); end if;
+
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
@@ -1408,8 +1418,6 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
-
-  if #name gt 0 then SaveBundle(bundle); end if;
 
   return bundle, ivpdir;
 end intrinsic;
@@ -1518,6 +1526,11 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   printf "\nComputation of the differential equations is now complete (%o seconds).\n\n",
 	 Realtime()-tstart;
 
+
+  // Integration may crash. Save everything up until this point.
+  if #name gt 0 then SaveBundle(bundle); end if;
+
+
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
@@ -1533,8 +1546,6 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   print "Used the following path:",path;
   print "The number of monomials appearing at each step:\n",pathMons;
   print "The number of monomials changed at each step:\n",pathMonsChange;
-
-  if #name gt 0 then SaveBundle(bundle); end if;
 
   return bundle, ivpdir;
 end intrinsic;
@@ -2637,7 +2648,6 @@ intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
       return linePairing[i1,i2] eq 1;
     end function;
 
-    print "planar pairs";
     planar_pairs:={lines[i]+lines[j] : i,j in [1..#lines] | lines_intersect(i,j)};
 
     quadrics:=Setseq({ q : q in all_curves[2] | not q in planar_pairs});
