@@ -2816,13 +2816,13 @@ intrinsic translate_period_matrix(A::AlgMatElt,f::RngMPolElt) -> RngMPolElt
 {
   Let g=translate_polynomial(A,f) be the translate of f. This function outputs a matrix M such that if P is a period matrix for the hypersurface Z(f) with respect to the grevlex cohom basis for f, then M*P is the grevlex period matrix for Z(g).
 }
-  // Idea: Send the homology basis on Z(f) via A, and send the cohom basis via pullback using Ainv
-  // Now the period matrix of Z(f) and Z(g) agree. We express the grevlex basis on g in terms of the Ainv pullback cohom basis to compute M.
-  g:=translate_polynomial(Determinant(A)*Adjoint(A),f);
+  // Idea: The pointwise action of A induces and isomorphism from Z(g) to Z(f). Identify the homology groups and therefore the integral cohomology groups with respect to this isomorphism. The resulting identification of cohomology groups is given by the obvious pullback on forms, which we implement via translate_form.
+  // The grevlex period matrix of Z(f) thus is a period matrix of Z(g) with respect to the pullback of the grevlex Griffiths basis on Z(f). Express the grevlex Griffiths basis on Z(g) in terms of these pullbacks in order to find the desired M.
+  g:=translate_polynomial(A,f);
   grevlex_basis:=ComputeCohomologyBasis(g : order:="grevlex"); 
-  translate_basis:=[translate_form(p)  : p in ComputeCohomologyBasis(f : order:="grevlex")]; 
+  translate_basis:=[translate_form(A,p)  : p in ComputeCohomologyBasis(f : order:="grevlex")]; 
   N:=CoordinatesInCohomology(g,translate_basis,grevlex_basis);
-  return Determinant(N)*Adjoint(N);
+  return N;
 end intrinsic;
 
 intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, straight:=false,  pathfinder:=0, integrationPath:=[0,1], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any,Any
@@ -2870,4 +2870,13 @@ intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, str
   primitivePeriods,precision:=loadPeriods(ivpdir*"periods");
 
   return primitivePeriods, precision;
+end intrinsic;
+
+intrinsic grevlex_periods_of_fermat(f::RngMPolElt : precision:=100) -> Any
+{ 
+  Computes the primitive grevlex period matrix of a Fermat hypersurface.
+}
+  cohom_basis:=FermatCohomologyBasis(f);
+  periods:=massIntegrate([ [w] : w in cohom_basis],Degree(f), Coefficients(f) : precision:=precision);
+  return Matrix([ p[1] : p in periods]);
 end intrinsic;
