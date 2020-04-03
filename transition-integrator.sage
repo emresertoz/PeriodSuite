@@ -106,6 +106,10 @@ def integrate_ode(ode_label):
 
     P.<t>=PolynomialRing(QQ)
     load(ode_label)    # File defines values: ode, init, path, label, loop_position, singular_locus
+
+    # This one needs some more careful parsing.
+    #with open(ode_label) as F:
+    #    sage_eval(F.read(), locals={stuff})
     
     initial_conditions = Matrix(init)
     path, singpts = voronoi_path(singular_locus)
@@ -177,6 +181,10 @@ def ith_compatible_matrix(i):
     # File contains `change_coordinates`
     load(basis_change_files[i])
 
+    # Might need some magic to parse/bind identifiers correctly.
+    #with open(basis_change_files[i]) as F:
+    #    identifier = sage_eval(F.read())
+    
     # Complex ball fields will interpret `field([a,b])` as an interval. We ned to parse
     # the element correctly first before coercing it into the complex ball field.
 
