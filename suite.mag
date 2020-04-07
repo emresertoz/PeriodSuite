@@ -380,7 +380,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     vprint PicardFuchs : "The Picard-Fuchs equation number", PFnumber, "took", t4-tstart, "seconds to compute.";
 
     // Machine readable summary stamp.
-    vprintf AIOutput : "AIStream: total-PF: %o, %o: %o\n", PFnumber, family_number, t2-t1;
+    vprintf AIOutput : "AIStream: total-PF: %o, %o: %o\n", PFnumber, family_number, t4-tstart;
     
     return &+[coefs[i]*D^(i-1):i in [1..#coefs]], reducedDerivatives;
   end function;
