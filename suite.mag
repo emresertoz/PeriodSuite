@@ -351,7 +351,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       // if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
       
       t2:=Cputime();      
-      vprintf PicardFuchs, 2 : "Checking independence took %o seconds. ", t2-t1;
+      vprintf PicardFuchs, 2 : "Checking independence took %o seconds.\n", t2-t1;
 
       // Timestamp printing for machine reading.
       vprintf AIOutput : "AIStream: %o\n", t2-t0;
