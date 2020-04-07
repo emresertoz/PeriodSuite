@@ -748,11 +748,16 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
   // self destruct after a set amount of time
   // Warning: this kills the Magma session if activated!
   if alarm gt 0 then Alarm(alarm); end if;
+
   B:=CompatibleCohomologyBasis(f0,f1 : pole_order_bound:=pole_order_bound);
   t0:=Cputime();
   ODEs:=PicardFuchs(B,f0,f1 : max_order:=max_order, family_number:=family_number);
   t1:=Cputime();
 
+  // On successful termination end the alarm
+  if alarm gt 0 then Alarm(0); end if;
+
+  
   L:=[];
   for i in [1..#ODEs] do
     requiredDerivatives := LocalBasis(ODEs[i]);
@@ -1446,6 +1451,7 @@ function SingularLocusInFamily(f0,f1)
 end function;
 
 intrinsic TransitionHomotopy(path::[RngMPolElt] :
+			     alarm:=0,
 			     precision:=100, straight:=false,
 			     bound_pole_order:=false,
 			     pathfinder:=0, integrationPaths:=[],
@@ -1502,6 +1508,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
       f1_is_smooth:=target_is_smooth;
       
       ivps:=ConstructIVPs(path[i],path[i+1] :
+			  alarm:=alarm,
 			  pathfinder:=pathfinder, family_number:=i,
 			  integrationPath:=integrationPaths[i],
 			  pole_order_bound:=pole_order_bound,
