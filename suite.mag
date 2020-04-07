@@ -1506,7 +1506,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   allODEs:=[];
   tstart:=Realtime();
   for i in [1..(#path-1)] do
-      print "\n\n************************************\nWe are at family number",i,
+      vprint PicardFuchs : "\n\n************************************\nWe are at family number",i,
 	    "out of",#path-1,"\n************************************\n";
 
       pob:=0; // pole order bound
@@ -1535,7 +1535,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 			     odes:=allODEs,
 			     deformation:=path, cohomBasis:=ivps`movingBasis,
 			     name:=name >;
-  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n",
+  vprintf PicardFuchs : "\nComputation of the differential equations is now complete (%o seconds).\n\n",
 	 Realtime()-tstart;
 
 
@@ -1547,7 +1547,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   /// Integration happens here ///////////
   ////////////////////////////////////////
   if integrate then
-    print "Starting integration.\n\n";
+    vprint PicardFuchs : "Starting integration.\n\n";
     bundle:=SolveTransitionIVPs(bundle);
   end if;
   ////////////////////////////////////////
@@ -1555,9 +1555,9 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-  print "Used the following path:",path;
-  print "The number of monomials appearing at each step:\n",pathMons;
-  print "The number of monomials changed at each step:\n",pathMonsChange;
+  vprint PicardFuchs, 2 : "Used the following path:",path;
+  vprint PicardFuchs, 2 : "The number of monomials appearing at each step:\n",pathMons;
+  vprint PicardFuchs, 2 : "The number of monomials changed at each step:\n",pathMonsChange;
 
   return bundle, ivpdir;
 end intrinsic;
