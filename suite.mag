@@ -1,3 +1,4 @@
+
 pathToSuite:="/home/akulkarn/PeriodSuite/";
 
 //************************************************************************************************
@@ -353,7 +354,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       vprintf PicardFuchs, 2 : "Checking independence took %o seconds. ", t2-t1;
 
       // Timestamp printing for machine reading.
-      vprintf AIOutput : t2-t1;
+      vprintf AIOutput : "AIStream: ", t2-t1;
     until stopLoop;
 
     t0:=Cputime();
