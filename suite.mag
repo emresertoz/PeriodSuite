@@ -4,6 +4,8 @@ pathToSuite:="/home/akulkarn/PeriodSuite/";
 // Global constants.
 //************************************************************************************************
 
+declare verbose PicardFuchs, 2;
+declare verbose AIOutput, 1;
 SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
 //************************************************************************************************
@@ -311,7 +313,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     message:=(family_number gt 0) select " -- Family number "*Sprint(family_number) else "";
 
     // Main loop
-    print "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,message,"\n";
+    vprint PicardFuchs : "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,message,"\n";
     tstart:=Cputime();
     t2:="null";
     stopLoop:=false;
@@ -336,7 +338,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       assert #reducedDerivatives gt 1;
       
       t1:=Cputime();
-      printf "GD reduction took %o seconds. ", t1-t0;
+      vprintf PicardFuchs, 2 : "GD reduction took %o seconds. ", t1-t0;
 
       // ****
       // Construct the matrix to check independence.
@@ -348,30 +350,33 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       // if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
       
       t2:=Cputime();      
-      printf "Checking independence took %o seconds. ", t2-t1;     
+      vprintf PicardFuchs, 2 : "Checking independence took %o seconds. ", t2-t1;
+
+      // Timestamp printing for machine reading.
+      vprintf AIOutput : t2-t1;
     until stopLoop;
 
     t0:=Cputime();
-    print "Found linearly dependent derivatives in", t0-tstart, "seconds.";
-    print "Will now compute the linear relation.";
+    vprint PicardFuchs : "Found linearly dependent derivatives in", t0-tstart, "seconds.";
+    vprint PicardFuchs : "Will now compute the linear relation.";
     
     mon:=&join[Seqset(Monomials(a)):a in reducedDerivatives];
     mon:=Setseq(mon);
     MM:=[[MonomialCoefficient(a,m):m in mon]:a in reducedDerivatives];    
     M:=Matrix(MM[1..(#MM-1)]);
     t1:=Cputime();
-    printf "Computed the basismatrix in %o seconds. ", t1-t0;
+    vprintf PicardFuchs, 2 : "Computed the basismatrix in %o seconds. ", t1-t0;
 
     U:=VectorSpaceWithBasis(M);
     t2:=Cputime();
-    printf "Constructed the vectorspace w/ basis in %o seconds. ", t2-t1;
+    vprintf PicardFuchs, 2 : "Constructed the vectorspace w/ basis in %o seconds. ", t2-t1;
     u:=U!MM[#MM];
     t3:=Cputime();
-    printf "Computed the coordinates in %o seconds. ", t3-t2;
+    vprintf PicardFuchs, 2 : "Computed the coordinates in %o seconds. ", t3-t2;
     coefs:=Append(Coordinates(U,-u),1);
     t4:=Cputime();
-    print "Computing the linear relations took", t4-t0, "seconds.";
-    print "The Picard-Fuchs equation number", PFnumber, "took", t4-tstart, "seconds to compute.";
+    vprint PicardFuchs : "Computing the linear relations took", t4-t0, "seconds.";
+    vprint PicardFuchs : "The Picard-Fuchs equation number", PFnumber, "took", t4-tstart, "seconds to compute.";
 
     return &+[coefs[i]*D^(i-1):i in [1..#coefs]], reducedDerivatives;
   end function;
