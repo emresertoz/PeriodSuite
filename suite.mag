@@ -1,9 +1,12 @@
-pathToSuite:="/Users/sertoez/git-projects/suite/";
+
+pathToSuite:="/home/akulkarn/PeriodSuite/";
 
 //************************************************************************************************
 // Global constants.
 //************************************************************************************************
 
+declare verbose PicardFuchs, 2;
+declare verbose AIOutput, 1;
 SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
 //************************************************************************************************
@@ -74,6 +77,25 @@ intrinsic WriteInsideStorageFolder(filename::MonStgElt, string::MonStgElt : Over
   SetColumns(0);
   Write(target,string : Overwrite:=Overwrite);
   SetColumns(cols);
+end intrinsic;
+
+intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=false)
+{ Writes the meta file in the initial value problem directory.}
+
+  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision) : name:=name);
+  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))   : name:=name);
+  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)       : name:=name);
+  
+  if first_of_path_is_fermat then
+      WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])) : name:=name);
+  end if;
+  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+
+  // Finally, write the path as a string, to give a redundant internal directoy for safety.
+  triplequote := "\"\"\"";
+  WriteInsideTempFolder("meta.sage", "path_string = " * triplequote * Sprint(path) * triplequote
+			: name:=name);
+  
 end intrinsic;
 
 procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
@@ -292,7 +314,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     message:=(family_number gt 0) select " -- Family number "*Sprint(family_number) else "";
 
     // Main loop
-    print "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,message,"\n";
+    vprint PicardFuchs : "\nComputing Picard-Fuchs equation number", PFnumber, "out of", TotalPFs,message,"\n";
     tstart:=Cputime();
     t2:="null";
     stopLoop:=false;
@@ -317,7 +339,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       assert #reducedDerivatives gt 1;
       
       t1:=Cputime();
-      printf "GD reduction took %o seconds. ", t1-t0;
+      vprintf PicardFuchs, 2 : "GD reduction took %o seconds. ", t1-t0;
 
       // ****
       // Construct the matrix to check independence.
@@ -329,31 +351,37 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
       // if &+[Degree(a) : a in reducedDerivatives] eq 0 then t2 := Cputime(); break; end if;      
       
       t2:=Cputime();      
-      printf "Checking independence took %o seconds. ", t2-t1;     
+      vprintf PicardFuchs, 2 : "Checking independence took %o seconds.\n", t2-t1;
+
+      // Timestamp printing for machine reading.
+      vprintf AIOutput : "AIStream: %o\n", t2-t0;
     until stopLoop;
 
     t0:=Cputime();
-    print "Found linearly dependent derivatives in", t0-tstart, "seconds.";
-    print "Will now compute the linear relation.";
+    vprint PicardFuchs : "Found linearly dependent derivatives in", t0-tstart, "seconds.";
+    vprint PicardFuchs : "Will now compute the linear relation.";
     
     mon:=&join[Seqset(Monomials(a)):a in reducedDerivatives];
     mon:=Setseq(mon);
     MM:=[[MonomialCoefficient(a,m):m in mon]:a in reducedDerivatives];    
     M:=Matrix(MM[1..(#MM-1)]);
     t1:=Cputime();
-    printf "Computed the basismatrix in %o seconds. ", t1-t0;
+    vprintf PicardFuchs, 2 : "Computed the basismatrix in %o seconds. ", t1-t0;
 
     U:=VectorSpaceWithBasis(M);
     t2:=Cputime();
-    printf "Constructed the vectorspace w/ basis in %o seconds. ", t2-t1;
+    vprintf PicardFuchs, 2 : "Constructed the vectorspace w/ basis in %o seconds. ", t2-t1;
     u:=U!MM[#MM];
     t3:=Cputime();
-    printf "Computed the coordinates in %o seconds. ", t3-t2;
+    vprintf PicardFuchs, 2 : "Computed the coordinates in %o seconds. ", t3-t2;
     coefs:=Append(Coordinates(U,-u),1);
     t4:=Cputime();
-    print "Computing the linear relations took", t4-t0, "seconds.";
-    print "The Picard-Fuchs equation number", PFnumber, "took", t4-tstart, "seconds to compute.";
+    vprint PicardFuchs : "Computing the linear relations took", t4-t0, "seconds.";
+    vprint PicardFuchs : "The Picard-Fuchs equation number", PFnumber, "took", t4-tstart, "seconds to compute.";
 
+    // Machine readable summary stamp.
+    vprintf AIOutput : "AIStream: total-PF: %o, %o: %o\n", PFnumber, family_number, t4-tstart;
+    
     return &+[coefs[i]*D^(i-1):i in [1..#coefs]], reducedDerivatives;
   end function;
 
@@ -729,11 +757,16 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
   // self destruct after a set amount of time
   // Warning: this kills the Magma session if activated!
   if alarm gt 0 then Alarm(alarm); end if;
+
   B:=CompatibleCohomologyBasis(f0,f1 : pole_order_bound:=pole_order_bound);
   t0:=Cputime();
   ODEs:=PicardFuchs(B,f0,f1 : max_order:=max_order, family_number:=family_number);
   t1:=Cputime();
 
+  // On successful termination end the alarm
+  if alarm gt 0 then Alarm(0); end if;
+
+  
   L:=[];
   for i in [1..#ODEs] do
     requiredDerivatives := LocalBasis(ODEs[i]);
@@ -1326,10 +1359,11 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=true);
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1426,6 +1460,7 @@ function SingularLocusInFamily(f0,f1)
 end function;
 
 intrinsic TransitionHomotopy(path::[RngMPolElt] :
+			     alarm:=0,
 			     precision:=100, straight:=false,
 			     bound_pole_order:=false,
 			     pathfinder:=0, integrationPaths:=[],
@@ -1445,10 +1480,12 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   ivpdir:=IVPWorkingDir(:subfolder:=name);
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
-  WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name);
-  WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name);
-  WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name);
+  WriteMetaFile(name, precision, path, reduce_initials);
+  
+  /* WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name); */
+  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
@@ -1473,13 +1510,14 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   allODEs:=[];
   tstart:=Realtime();
   for i in [1..(#path-1)] do
-      print "\n\n************************************\nWe are at family number",i,
+      vprint PicardFuchs : "\n\n************************************\nWe are at family number",i,
 	    "out of",#path-1,"\n************************************\n";
 
       pob:=0; // pole order bound
       f1_is_smooth:=target_is_smooth;
       
       ivps:=ConstructIVPs(path[i],path[i+1] :
+			  alarm:=alarm,
 			  pathfinder:=pathfinder, family_number:=i,
 			  integrationPath:=integrationPaths[i],
 			  pole_order_bound:=pole_order_bound,
@@ -1501,7 +1539,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 			     odes:=allODEs,
 			     deformation:=path, cohomBasis:=ivps`movingBasis,
 			     name:=name >;
-  printf "\nComputation of the differential equations is now complete (%o seconds).\n\n",
+  vprintf PicardFuchs : "\nComputation of the differential equations is now complete (%o seconds).\n\n",
 	 Realtime()-tstart;
 
 
@@ -1513,7 +1551,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   /// Integration happens here ///////////
   ////////////////////////////////////////
   if integrate then
-    print "Starting integration.\n\n";
+    vprint PicardFuchs : "Starting integration.\n\n";
     bundle:=SolveTransitionIVPs(bundle);
   end if;
   ////////////////////////////////////////
@@ -1521,9 +1559,9 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 
   pathMons:=[#Monomials(p) : p in path];
   pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-  print "Used the following path:",path;
-  print "The number of monomials appearing at each step:\n",pathMons;
-  print "The number of monomials changed at each step:\n",pathMonsChange;
+  vprint PicardFuchs, 2 : "Used the following path:",path;
+  vprint PicardFuchs, 2 : "The number of monomials appearing at each step:\n",pathMons;
+  vprint PicardFuchs, 2 : "The number of monomials changed at each step:\n",pathMonsChange;
 
   return bundle, ivpdir;
 end intrinsic;
@@ -1745,20 +1783,30 @@ intrinsic loadPeriods(filename::MonStgElt) -> Any, Any
 {
   Parses the output of integration.
 }
-  file:=Open(filename,"r");
+file:=Open(filename,"r");
+
+  // read precision
   s:=Gets(file);
   precision:=eval s;
+
+  // read the storage precision for the arb matrix.
   s:=Gets(file);
   CC<I>:=ComplexField(eval s);
   old_prec:=Precision(GetDefaultRealField());
   SetDefaultRealFieldPrecision(eval s);
+
+  // Read the periods from the file.
   primitive:=[];
   s:=Gets(file);
   while not IsEof(s) do
     Append(~primitive,eval(s));
     s:=Gets(file);
   end while;
+
+  // Resent the default real field precision.
   SetDefaultRealFieldPrecision(old_prec);
+
+  // Return the period matrix and the precision.
   return Matrix(primitive), precision;
 end intrinsic;
 
@@ -2711,7 +2759,6 @@ end intrinsic;
 // Shioda's computation of the Picard numbers for Delsarte surfaces, used for testing mainly
 //************************************************************************************************
 
-
 intrinsic picardNumberOfDelsarte(f::RngMPolElt) -> RngIntElt
 {
   Compute the Picard number of a Delsarte surface whose exponents are defined by the 4x4 integral matrix A.
@@ -2739,7 +2786,9 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   // The polynomial is not divisible by a coordinate function
   // equivalently, for each j, at least one row has a zero at j-th column
   assert &and[&or[A[i,j] eq 0 : i in [1..4]] : j in [1..4]];
-  // The rest of the setup as in Shioda's "An explicit algorithm for computing the Picard number of certain surfaces"
+
+  // The rest of the setup as in Shioda's paper:
+  // "An explicit algorithm for computing the Picard number of certain surfaces"
   adjA:=Adjoint(A);
   delta:=GCD(Eltseq(adjA));
   assert delta gt 0; // just making sure GCD does the right thing
@@ -2747,12 +2796,13 @@ intrinsic picardNumberOfDelsarte(A::AlgMatElt) -> RngIntElt
   Ainv:=1/detA*adjA;
   B:=ChangeRing(d*Ainv,Integers());
   Rd:=Integers(d);
-  Md:=Kernel(Matrix([[Rd|1] : i in [1..4]])); 
+  Md:=Kernel(Matrix([[Rd|1] : i in [1..4]]));
   LA:=Image(ChangeRing(B,Rd));
-  // For computational efficiency we do not construct Ad or Bd explicitly 
+  // For computational efficiency we do not construct Ad or Bd explicitly
   Ad:={! m in Md | &and[ mi ne 0 : mi in Eltseq(m)] !};
   tset:={t : t in [1..d] | GCD(t,d) eq 1};
-  // Bd should really consist of entries in Ad, instead of Md, but for the construction of IcapLA this doesn't matter.
+  // Bd should really consist of entries in Ad, instead of Md.
+  // For the construction of IcapLA this doesn't matter.
   Bd:={! m in Md | &and[&+ChangeUniverse(Eltseq(t*m),Integers()) eq 2*d  : t in tset] !};
   IcapLA:={m : m in LA | (m in Ad) and (not m in Bd)};
   lambda:=#IcapLA;
