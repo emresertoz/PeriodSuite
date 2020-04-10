@@ -1,11 +1,10 @@
-
-pathToSuite:="/home/akulkarn/PeriodSuite/";
+pathToSuite:="/";
 
 //************************************************************************************************
 // Global constants.
 //************************************************************************************************
 
-declare verbose PicardFuchs, 2;
+declare verbose PicardFuchs, 2; SetVerbose("PicardFuchs", 2);
 declare verbose AIOutput, 1;
 SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
