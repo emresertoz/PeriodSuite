@@ -78,15 +78,6 @@ singular_locus=[1]
 
 """
 
-# TODO:
-"""
-1. parse contents of meta file
-use identifier=... format to split fields. bind the values to ids.
-
-2. Construct the voronoi path first, pass to integrate ode.
-
-"""
-
 def common_voronoi_path(ivps):
     R = PolynomialRing(Rationals(), "t")
     t = R.gens()[0]
