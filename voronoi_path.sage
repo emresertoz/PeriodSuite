@@ -33,7 +33,7 @@ def voronoi_path(polylist):
     pts.add((R(0),R(0)))
     pts.add((R(1),R(0)))
     if len(pts) == 2:
-        return [0,1]
+        return [0,1], []
 
     # Add a bounding box to discourage paths going in off directions
     [[pts.add((R(i),R(j))) for i in {-1,1}] for j in {-1,1}]
