@@ -5,24 +5,7 @@ pathToSuite="/";
 # a concurrency issue.
 """ Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
 
-### TIMEOUT SUPPORT ###
-#
-# If `timeout` is set via command line, the process will self-destruct after the set time.
-
 import os, sys, getopt
-import signal
-
-class Alarm(Exception):
-    pass
-
-def alarm_handler(signum, frame):
-    sys.exit(1)
-
-try:
-    signal.signal(signal.SIGALRM, alarm_handler)
-    signal.alarm(timeout)
-except NameError:
-    pass
 
 
 ############################################################
@@ -50,6 +33,25 @@ for opt, arg in opts:
         print("ERROR: Invalid option: {}".format(opt))
         sys.exit(1)
 
+
+############################################################
+# Timeout handling.
+#
+# If `timeout` is set via command line, the process will self-destruct after the set time.
+
+import signal
+
+class Alarm(Exception):
+    pass
+
+def alarm_handler(signum, frame):
+    sys.exit(1)
+
+try:
+    signal.signal(signal.SIGALRM, alarm_handler)
+    signal.alarm(timeout)
+except NameError:
+    pass
 
         
 ############################################################
