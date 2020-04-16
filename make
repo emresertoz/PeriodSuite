@@ -19,13 +19,3 @@ pathToSuite:=\"${pathToSuite}"/"\";
 cat > SAGE_CONFIG.py << EOF
 pathToSuite = "$pathToSuite/"
 EOF
-
-sed -i.backup "1d" $integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $integrator
-
-sed -i.backup "1d" $t_integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $t_integrator
