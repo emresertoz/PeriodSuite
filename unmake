@@ -10,13 +10,3 @@ sed -i.backup "1d" $suite
 sed -i.backup "1i\\
 pathToSuite:=\"${pathToSuite}"/"\";
 " $suite
-
-sed -i.backup "1d" $integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $integrator
-
-sed -i.backup "1d" $t_integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $t_integrator
