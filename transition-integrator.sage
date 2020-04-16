@@ -7,7 +7,6 @@ from SAGE_CONFIG import *
 
 import os, sys, getopt
 
-
 ############################################################
 # Retrieve ivpdir and timeout from the command line.
 
