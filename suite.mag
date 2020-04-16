@@ -122,7 +122,7 @@ end procedure;
 
 
 // Manage sage subprocess calls.
-intrinsic CallIntegrator(script_name, ivpdir)
+intrinsic CallIntegrator(script_name, ivpdir) -> RngIntElt
 	  {Manage sage subprocess calls.}
 	  
   print "\n\nStarting SageMath, this may take some time...\n\n";
@@ -1586,7 +1586,7 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CallIntegrator("transition-integrator.sage", ivpdir)
+  CallIntegrator("transition-integrator.sage", ivpdir);
   return bundle;
 end intrinsic;
 
@@ -1610,7 +1610,7 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CallIntegrator("integrator.sage", ivpdir)
+  CallIntegrator("integrator.sage", ivpdir);
   
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
