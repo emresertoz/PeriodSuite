@@ -1,4 +1,4 @@
-pathToSuite="/";
+from SAGE_CONFIG import *
 
 # Magma source has been changed so that the Temp-directory is sent via the System call.
 # This enables us to specify the load directory from a sage application, as well as prevent

@@ -15,6 +15,11 @@ sed -i.backup "1i\\
 pathToSuite:=\"${pathToSuite}"/"\";
 " $suite
 
+# set directory names in sage
+cat > SAGE_CONFIG.py << EOF
+pathToSuite = "$pathToSuite/"
+EOF
+
 sed -i.backup "1d" $integrator
 sed -i.backup "1i\\
 pathToSuite=\"${pathToSuite}"/"\";
