@@ -1613,7 +1613,7 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CallIntegrator("transition-integrator.sage", ivpdir);
+  error_code:=CallIntegrator("transition-integrator.sage", ivpdir);
   return bundle;
 end intrinsic;
 
@@ -1637,7 +1637,7 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CallIntegrator("integrator.sage", ivpdir);
+  error_code:=CallIntegrator("integrator.sage", ivpdir);
   
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
@@ -2896,7 +2896,7 @@ intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, str
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
-  CallIntegrator("integrator.sage", ivpdir);
+  error_code:=CallIntegrator("integrator.sage", ivpdir);
   ////////////////////////////////////////
   ////////////////////////////////////////
   ivpdir:=IVPWorkingDir(:subfolder:=name);
