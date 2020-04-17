@@ -1,8 +1,36 @@
-### TIMEOUT SUPPORT ###
+import os, sys, getopt
+
+############################################################
+# Retrieve ivpdir and timeout from the command line.
+
+# Default options
+myargv = sys.argv[1:]
+
+# Parse the input configuration.
+opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
+
+# Check to make sure nothing bad happened.
+if not args == []:
+    print("ERROR: options misinterpreted as arguments. Please check the input.")
+    sys.exit(1)
+
+for opt, arg in opts:
+    if opt == "--timeout":
+        timeout = eval(arg)
+    
+    elif opt == "--ivpdir":
+        ivpdir = arg
+
+    else:
+        print("ERROR: Invalid option: {}".format(opt))
+        sys.exit(1)
+
+
+############################################################
+# Timeout handling.
 #
 # If `timeout` is set via command line, the process will self-destruct after the set time.
 
-import sys
 import signal
 
 class Alarm(Exception):
@@ -17,6 +45,9 @@ try:
 except NameError:
     pass
 
+        
+############################################################
+# Begin main script.
 
 load(pathToSuite + "voronoi_path.sage")
 
@@ -35,32 +66,11 @@ print("Beginning integration...")
 # reduce
 load(ivpdir+"meta.sage")
 
-DOP, t, D       = DifferentialOperators()
 digit_precision = precision
 bit_precision   = ceil(log(10^(precision+10))/log(2))+100
 field           = ComplexBallField(bit_precision)
 
 load(pathToSuite + "arb_matrix_cereal_wrap.sage")
-
-# class ARBMatrixCerealWrap:
-#     """
-#     A wrapper class to enable serialization of complex arb matrix objects. The original arb matrix
-#     can be constructed via the `arb_matrix` method.
-#     """
-#     def __init__(self, arb_mat):
-#         self.nrows = arb_mat.nrows()
-#         self.ncols = arb_mat.ncols()
-#         self.arb_entries = [ [x.mid(), x.diameter()] for x in arb_mat.list()]
-#         self.base_ring = arb_matrix.base_ring()
-
-#     def ball_field_elem(self, x):
-#         return field(x[0]).add_error(x[1])
-    
-#     def arb_matrix(self):
-#         return matrix(self.field, self.nrows , self.ncols, map(self.ball_field_elem, self.arb_entries)  )
-        
-#     def list(self):
-#         return self.arb_entries
 
 """
 An ode label is of the form (step_number, equation_number). The (i,j)-th equation is the $j$-th ode
@@ -88,24 +98,52 @@ init=[
 path=[ 0, 1 ]
 label=(1,2)
 loop_position=-1
-sngular_locus=[1]
+singular_locus=[1]
 
 """
+
+def common_voronoi_path(ivps):
+    R = PolynomialRing(Rationals(), "t")
+    t = R.gens()[0]
+
+    locals_dic = {'t' : t}
+    polys = []
+    for fname in ivps:
+        str_poly_list = parse_suite_file(fname)['singular_locus']
+        polys += sage_eval(str_poly_list, locals=locals_dic)
+
+    path, sing_pts = voronoi_path(polys)
+    return path
+
 # For the sake of code clarity, we pass the value back as a proper function call.
 # Alternatively, the rows can be written to files to be dealt with later instead.
 #
-def integrate_ode(ode_label):
+# TODO: Create Voronoi path first, then pass to function.
+from parse_suite_data import *
+def integrate_ode(ode_label, path):
     print("Integration started")    
 
-    P.<t>=PolynomialRing(QQ)
-    load(ode_label)    # File defines values: ode, init, path, label, loop_position, singular_locus
+    #Code below replaces load(ode_label)
 
-    # This one needs some more careful parsing.
-    #with open(ode_label) as F:
-    #    sage_eval(F.read(), locals={stuff})
+    DOP, t, D  = DifferentialOperators()
+    locals_dic = {'D':D, 't':t}
+    id_dic = parse_suite_file(ode_label)
+
+    # File specified by ode_label defines values:
+    #      ode, init, path, label, loop_position, singular_locus
+    #
+    # Bind identifiers read from file.
+    ode  = sage_eval(id_dic['ode'], locals=locals_dic)
+    init = sage_eval(id_dic['init'], locals=locals_dic)
+    label = sage_eval(id_dic['label'], locals=locals_dic)
+
+    #singular_locus = sage_eval(id_dic['singular_locus'], locals=locals_dic)
+
+    #####
+    # Do the main integration.
     
     initial_conditions = Matrix(init)
-    path, singpts = voronoi_path(singular_locus)
+    #path, singpts = voronoi_path(singular_locus)
     
     transition_mat = complex_numerical_transition_matrix(ode, path, precision)
 
@@ -114,11 +152,11 @@ def integrate_ode(ode_label):
         initial_conditions = initial_conditions.change_ring(transition_mat.base_ring())
         
     # Status update.
-    max_err = max( x.diameter() for x in transition_mat.list() )    
+    max_err = max(x.diameter() for x in transition_mat.list())
     print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
-    transition_row = ARBMatrixCerealWrap(matrix( transition_mat.row(0)*initial_conditions ))
+    transition_row = ARBMatrixCerealWrap(matrix(transition_mat.row(0)*initial_conditions))
         
     return [transition_row,False,label] 
 #####
@@ -160,7 +198,9 @@ if __name__ == '__main__':
     #pool = mp.Pool(mp.cpu_count() - 10)
     #results = pool.map(integrate_ode, ivps)
 
-    results = map(integrate_ode, ivps)
+    common_V_path = common_voronoi_path(ivps)
+    
+    results = map((lambda x : integrate_ode(x, common_V_path)), ivps)
     for solution in results:
         label      = solution[-1]
         tms[label] = solution[0]
@@ -191,8 +231,8 @@ def ith_compatible_matrix(i):
 print "Rearranging the matrices. Writing to file..."
 
 with open(ivpdir+"transition_mat.sobj",'w') as outfile:
-    total_transition_mat = prod( ith_compatible_matrix(i) for i in range(steps) )
-    pickle.dump( ARBMatrixCerealWrap(total_transition_mat), outfile )
+    total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
+    pickle.dump(ARBMatrixCerealWrap(total_transition_mat), outfile)
 
     #TODO: Also save the digit_precision somewhere sensible.
 

@@ -229,6 +229,12 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   df := [Derivative(f,i):i in [1..numVars]];
   J := IdealWithFixedBasis(df);
 
+  // Cache the Groebner basis
+  t0 := Cputime();
+  Groebner(J);
+  t1 := Cputime();
+  vprint AIOutput : "AIStream: GroebnerInit: ", t1-t0;
+  
   ell := func<p | (Degree(p)+Ngens(Parent(p)))/Degree(f)>;
 
   //***********************
