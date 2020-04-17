@@ -120,6 +120,36 @@ procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
 
 end procedure;
 
+procedure CarefulInitializeIVPDirectory(name, ivpdir, overwrite)
+    //{First ensures that the directory "ivpdir" exists. If overwrite is true, delete the IVP equation files in this directory. Otherwise, raise an error.}
+	
+  // if no name has been specified then set overwrite to true and clear ivpdir
+  overwrite:=overwrite or (#name eq 0);
+  deletable_file_globs := ["meta.sage", "IVP-*.sage", "BaseChange-*.sage", "bundle"];
+    
+  // Unix conditional check to see if directory exists and if it is safe to overwrite.
+  if System("[ -d "*ivpdir*" ]") eq 0 then
+
+    error if System("[ -f "*ivpdir*SAFEOVERWRITECODE*" ]") ne 0,
+	     "Safe overwrite file: '"*SAFEOVERWRITECODE*"' does not exist in directory. "*
+	     "If you *really* want `rm -fr *` to run in this directory, create this file "*
+	     "and try again.";
+
+    error if not overwrite, "folder name already exists, change 'name' or set 'overwrite:=true'";
+
+    for glob in deletable_file_globs do
+	if System("[ -f "*ivpdir*glob*" ]") eq 0 then
+	    System("rm -r " * ivpdir * glob);
+	end if;
+    end for;
+    
+  else 
+    System("mkdir "*ivpdir);
+    System("touch "*ivpdir*SAFEOVERWRITECODE);
+  end if;
+
+end procedure;
+
 
 // Manage sage subprocess calls.
 intrinsic CallIntegrator(script_name, ivpdir) -> RngIntElt
@@ -1492,15 +1522,9 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 
   beginningTime:=Realtime();
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
-
+  CarefulInitializeIVPDirectory(name, ivpdir, overwrite);
   WriteMetaFile(name, precision, path, reduce_initials);
-  
-  /* WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)          : name:=name); */
-  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision)    : name:=name); */
-  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))      : name:=name); */
-  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials) : name:=name); */
-  
+    
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
   assert #integrationPaths eq #path-1; 
