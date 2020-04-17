@@ -136,9 +136,12 @@ procedure CarefulInitializeIVPDirectory(name, ivpdir, overwrite)
 	     "and try again.";
 
     error if not overwrite, "folder name already exists, change 'name' or set 'overwrite:=true'";
-
+    
     for glob in deletable_file_globs do
-	if System("[ -f "*ivpdir*glob*" ]") eq 0 then
+	glob_test_cmd := Sprintf("test -n \"$(find %o -maxdepth 1 -name '%o' -print -quit)\"",
+				 ivpdir, glob);
+	
+	if System(glob_test_cmd) eq 0 then
 	    System("rm -r " * ivpdir * glob);
 	end if;
     end for;
