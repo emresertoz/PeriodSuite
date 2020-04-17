@@ -1,26 +1,12 @@
 #!/bin/bash
 
 pathToSuite=$(pwd)
-suite="suite.mag"
-integrator="integrator.sage"
-t_integrator="transition-integrator.sage"
 
+# writing the path to the root of the repo to be read by Magma
+echo "pathToSuite:=\"${pathToSuite}/\";" > $pathToSuite/pathToSuite.mag
 
-mkdir -p ${pathToSuite}"/""ode_storage/incinerator";
+# prepares folders for storage and for temporary files
 mkdir -p ${pathToSuite}"/""fermat_data";
+mkdir -p ${pathToSuite}"/""ode_storage/incinerator";
 touch ${pathToSuite}"/""ode_storage/incinerator/.PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
-sed -i.backup "1d" $suite
-sed -i.backup "1i\\
-pathToSuite:=\"${pathToSuite}"/"\";
-" $suite
-
-sed -i.backup "1d" $integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $integrator
-
-sed -i.backup "1d" $t_integrator
-sed -i.backup "1i\\
-pathToSuite=\"${pathToSuite}"/"\";
-" $t_integrator

@@ -1,10 +1,3 @@
-pathToSuite="/";
-
-# Magma source has been changed so that the Temp-directory is sent via the System call.
-# This enables us to specify the load directory from a sage application, as well as prevent
-# a concurrency issue.
-""" Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
-
 ### TIMEOUT SUPPORT ###
 #
 # If `timeout` is set via command line, the process will self-destruct after the set time.

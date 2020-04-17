@@ -1,13 +1,6 @@
-pathToSuite="/";
-
-# Magma source has been changed so that the Temp-directory is sent via the System call.
-# This enables us to specify the load directory from a sage application, as well as prevent
-# a concurrency issue.
-""" Example statement: ivpdir="/usr/people/avinash/Gauss-Manin/PeriodSuite/ode_storage/test/" """
-
 ncpus=100
-
 print("Beginning integration...")
+# ivpdir is defined while this script is called from suite.mag
 load(ivpdir+"meta.sage")
 
 import time
@@ -165,7 +158,7 @@ for key in loop_keys:
 # in case of loop, the last batch of transition matrices gets us to a
 # smooth hypersurface close to the target hypersurface
 
-# reduce is in the meta file. if true initial conditions are in terms of periods of the Fermat hypersurface
+# reduce is in the meta file. if true, then initial conditions are expressed in terms of periods of the Fermat hypersurface
 if reduce:
     periods_of_fermat=compute_periods_of_fermat()
 else:

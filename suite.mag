@@ -1,4 +1,4 @@
-pathToSuite:="/";
+import "pathToSuite.mag": pathToSuite;
 
 //************************************************************************************************
 // Global constants.
@@ -1572,18 +1572,10 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
 
-  /* cols := GetColumns(); */
-  /* SetColumns(0); */
-  /* print "\n\nStarting SageMath, this may take some time...\n\n"; */
-  /* Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true); */
-  /* SetColumns(cols); */
-
   print "\n\nStarting SageMath, this may take some time...\n\n";
 
-  // Format command string. Remember that command strings need quotes.
-  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir,
-			PathToSuite()*"transition-integrator.sage");
-
+  // Format command string. 
+  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"transition-integrator.sage");
   System(Sprintf("$(which sage) -c '%o'", cmd_string));
   return bundle;
 end intrinsic;
@@ -1615,8 +1607,8 @@ intrinsic SolveIVPs(bundle::Any) -> Any
   // Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
   //SetColumns(cols);
 
-  // Format command string. Remember that command strings need quotes. 
-  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  // Format command string.
+  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"integrator.sage");
   System(Sprintf("$(which sage) -c '%o'", cmd_string));
 
   if isSmooth(bundle`equation) then
@@ -2147,7 +2139,7 @@ intrinsic test( : name:="") -> Rec
   4*x^4 - 6*x*w^3 + 2*y^4 - 6*z^4,
   4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4
   ];
-  return PeriodHomotopy(path : reduce_initials:=false, pathfinder:=0,name:=name, overwrite:=true);
+  return PeriodHomotopy(path : reduce_initials:=true, pathfinder:=0,name:=name, overwrite:=true);
   //f:=4*x^4 - 9*x*z*w^2 - 6*x*w^3 + 2*y^4 - 6*z^4;
   //PeriodHomotopy(f : pathfinder:=1);
 end intrinsic;
@@ -2877,7 +2869,7 @@ intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, str
   /// Integration happens here ///////////
   ////////////////////////////////////////
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  cmd_string := Sprintf("ivpdir=\"%o\"; load(\"%o\")", ivpdir, PathToSuite()*"integrator.sage");
+  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"integrator.sage");
   System(Sprintf("$(which sage) -c '%o'", cmd_string));
   ////////////////////////////////////////
   ////////////////////////////////////////
