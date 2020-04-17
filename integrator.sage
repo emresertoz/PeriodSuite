@@ -1,5 +1,3 @@
-from SAGE_CONFIG import *
-
 import os, sys, getopt
 
 ############################################################
