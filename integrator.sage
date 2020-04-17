@@ -1,3 +1,34 @@
+from SAGE_CONFIG import *
+
+import os, sys, getopt
+
+############################################################
+# Retrieve ivpdir and timeout from the command line.
+
+# Default options
+myargv = sys.argv[1:]
+
+# Parse the input configuration.
+opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
+
+# Check to make sure nothing bad happened.
+if not args == []:
+    print("ERROR: options misinterpreted as arguments. Please check the input.")
+    sys.exit(1)
+
+for opt, arg in opts:
+    if opt == "--timeout":
+        timeout = eval(arg)
+    
+    elif opt == "--ivpdir":
+        ivpdir = arg
+
+    else:
+        print("ERROR: Invalid option: {}".format(opt))
+        sys.exit(1)
+
+############################################################
+
 ncpus=100
 print("Beginning integration...")
 # ivpdir is defined while this script is called from suite.mag
