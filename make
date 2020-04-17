@@ -9,4 +9,3 @@ echo "pathToSuite:=\"${pathToSuite}/\";" > $pathToSuite/pathToSuite.mag
 mkdir -p ${pathToSuite}"/""fermat_data";
 mkdir -p ${pathToSuite}"/""ode_storage/incinerator";
 touch ${pathToSuite}"/""ode_storage/incinerator/.PERIODSUITE-this-directory-is-safe-to-rm-fr";
-

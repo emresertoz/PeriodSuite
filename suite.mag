@@ -121,6 +121,15 @@ procedure CheckIfIVPDirectoryExists(name, ivpdir, overwrite)
 end procedure;
 
 
+// Manage sage subprocess calls.
+intrinsic CallIntegrator(script_name, ivpdir) -> RngIntElt
+	  {Manage sage subprocess calls.}
+	  
+  print "\n\nStarting SageMath, this may take some time...\n\n";
+  cmd_string := Sprintf("%o --ivpdir=%o --pathToSuite=%o", PathToSuite()*script_name, ivpdir, PathToSuite());
+  return System(Sprintf("$(which sage) %o", cmd_string));
+end intrinsic;
+
 //************************************************************************************************
 // Fermat polynomial construction methods
 //************************************************************************************************
@@ -1577,12 +1586,7 @@ intrinsic SolveTransitionIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-
-  // Format command string. 
-  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"transition-integrator.sage");
-  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  CallIntegrator("transition-integrator.sage", ivpdir);
   return bundle;
 end intrinsic;
 
@@ -1606,17 +1610,8 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
+  CallIntegrator("integrator.sage", ivpdir);
   
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-  //cols := GetColumns();
-  // SetColumns(0);
-  // Write(pathToSuite*"ivpdir.sage", "ivpdir=\""*ivpdir*"\";" : Overwrite:=true);
-  //SetColumns(cols);
-
-  // Format command string.
-  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"integrator.sage");
-  System(Sprintf("$(which sage) -c '%o'", cmd_string));
-
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
     bundle:=PrimitiveToComplete(bundle);
@@ -2874,9 +2869,7 @@ intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, str
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
-  print "\n\nStarting SageMath, this may take some time...\n\n";
-  cmd_string := Sprintf("ivpdir=\"%o\"; pathToSuite=\"%o\"; load(\"%o\")", ivpdir, PathToSuite(), PathToSuite()*"integrator.sage");
-  System(Sprintf("$(which sage) -c '%o'", cmd_string));
+  CallIntegrator("integrator.sage", ivpdir);
   ////////////////////////////////////////
   ////////////////////////////////////////
   ivpdir:=IVPWorkingDir(:subfolder:=name);
