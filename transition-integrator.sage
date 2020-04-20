@@ -1,5 +1,5 @@
 import os, sys, getopt
-from SAGE_CONFIG.py import *
+from SAGE_CONFIG import *
 
 ############################################################
 # Retrieve ivpdir and timeout from the command line.
