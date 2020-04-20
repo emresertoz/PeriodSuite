@@ -9,3 +9,13 @@
 *.out
 *.pdf
 .*.swp
+*.sage.py
+*.backup
+fermat_data/
+SAGE_CONFIG*
+.scan*
+ode_storage/
+*.pyc
+pathToSuite*
+*~
+*.sig

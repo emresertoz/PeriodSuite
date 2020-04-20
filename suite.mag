@@ -159,7 +159,7 @@ intrinsic CallIntegrator(script_name, ivpdir) -> RngIntElt
 	  {Manage sage subprocess calls.}
 	  
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  cmd_string := Sprintf("%o --ivpdir=%o --pathToSuite=%o", PathToSuite()*script_name, ivpdir, PathToSuite());
+  cmd_string := Sprintf("%o --ivpdir=%o", PathToSuite()*script_name, ivpdir);
   return System(Sprintf("$(which sage) %o", cmd_string));
 end intrinsic;
 

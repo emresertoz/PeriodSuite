@@ -6,6 +6,7 @@ pathToSuite=$(pwd)
 
 # writing the path to the root of the repo to be read by Magma
 echo "pathToSuite:=\"${pathToSuite}/\";" > $pathToSuite/pathToSuite.mag
+echo "pathToSuite=\"${pathToSuite}/\";" > $pathToSuite/SAGE_CONFIG.py
 
 # prepares folders for storage and for temporary files
 mkdir -p ${pathToSuite}"/""fermat_data";
