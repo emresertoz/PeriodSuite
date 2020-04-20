@@ -8,7 +8,7 @@ from SAGE_CONFIG import *
 myargv = sys.argv[1:]
 
 # Parse the input configuration.
-opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout=", "pathToSuite="])
+opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
 
 # Check to make sure nothing bad happened.
 if not args == []:
@@ -21,9 +21,6 @@ for opt, arg in opts:
     
     elif opt == "--ivpdir":
         ivpdir = arg
-
-    elif opt == "--pathToSuite":
-        pathToSuite = arg
 
     else:
         print("ERROR: Invalid option: {}".format(opt))
