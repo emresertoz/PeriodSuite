@@ -2720,28 +2720,28 @@ end intrinsic;
 
 
 // Rm x Rn -> R(m+n) -> R(m+n)/Jac(X)
-intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt,n::RngIntElt) -> EltSeq
+intrinsic MultiplyAndReduce(f::RngMPolElt,u::RngIntElt,v::RngIntElt) -> EltSeq
 {
   For each monomial of degree m, computes the products with monomials of degree n and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
 }
   R:=Parent(f);
-  // careful here, I haven't though this through
-  assert (n+m-Ngens(R)) mod Degree(f) eq 0;
-  Rm:=MonomialsOfDegree(R,m);
-  Rn:=MonomialsOfDegree(R,n);
-  prods:=[[ mon1*mon2 : mon2 in Rn] : mon1 in Rm];
+  assert u+v eq (n/2+1)*d-n-2;
+  R1:=MonomialsOfDegree(R,u);
+  R2:=MonomialsOfDegree(R,v);
+  prods:=[[ mon1*mon2 : mon2 in R1] : mon1 in R2];
   B:=ComputeCohomologyBasis(f : order:="grevlex"); 
   // M[i] will be a matrix whose *rows* correspond to coordinates of entries in prods wrt B
   return [CoordinatesInCohomology(f,B,prod) : prod in prods];
 end intrinsic;
 
-intrinsic MultiplyAndReduce(f::RngMPolElt,m::RngIntElt) -> EltSeq
+intrinsic MultiplyAndReduce(f::RngMPolElt,u::RngIntElt) -> EltSeq
 {
-  For each monomial of degree m, computes the products with monomials of complimentary degree and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree m, expressing this map.
+  For each monomial of degree u, computes the products with monomials of complimentary degree and reduces these products modulo the jacobian ideal of f using grevlex ordering. The output is a sequence of matrices, one for each monomial of degree u, expressing this map.
 }
-  d:=Degree(f);
-  n:=Ceiling((m+Ngens(Parent(f)))/d)*d-(m+Ngens(Parent(f)));
-  return MultiplyAndReduce(f,m,n);
+  d:=Degree(f); n:=Ngens(Parent(f))-2; // dimension of Z(f)
+  assert n mod 2 eq 0;
+  v:=Integer()!(n/2+1)*d-n-2-u;
+  return MultiplyAndReduce(f,u,v);
 end intrinsic;
 
 intrinsic PolynomialsVanishingOnHodgeCycle(X::Rec, hodgeCycle::Any, degree::RngIntElt : working_precision:=Ceiling(X`precision*0.8)) -> Any
