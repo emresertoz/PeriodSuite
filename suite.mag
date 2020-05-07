@@ -1163,7 +1163,7 @@ end intrinsic;
 // the orthogonal complement of the polarization is assumed negative definite
 intrinsic LatticeElementsOfNormAndDegree(lattice::AlgMatElt,polarization::ModMatRngElt,N::RngIntElt,d1::RngIntElt,d2::RngIntElt) -> Any
 {
- lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of polarization is assumed to be negative definite. For an elemend D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
+ lattice is an intersection matrix on ZZ^rho. Polarization is an element in ZZ^rho. The orthogonal complement of polarization is assumed to be negative definite. For an element D in ZZ^rho, D^2 is norm and D dot polarization is degree. Find all vectors of norm N and degree between d1 and d2.
 }
 
   // rank of lattice
