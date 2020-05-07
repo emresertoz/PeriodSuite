@@ -2741,7 +2741,7 @@ intrinsic MultiplyAndReduce(f::RngMPolElt,u::RngIntElt) -> EltSeq
   d:=Degree(f); n:=Ngens(Parent(f))-2; // dimension of Z(f)
   assert n mod 2 eq 0;
   v:=Integers()!(n/2+1)*d-n-2-u;
-  return MultiplyAndReduce(f,u,v);
+  return MultiplyAndReduce(f,v,u);
 end intrinsic;
 
 intrinsic PolynomialsVanishingOnHodgeCycle(X::Rec, hodgeCycle::Any, degree::RngIntElt : working_precision:=Ceiling(X`precision*0.8)) -> Any
