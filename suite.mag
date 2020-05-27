@@ -1556,12 +1556,16 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 
       pob:=0; // pole order bound
       f1_is_smooth:=target_is_smooth;
+      if i eq (#path-1) then
+        pob:=pole_order_bound;
+      else
+        pob:=false;
       
       ivps:=ConstructIVPs(path[i],path[i+1] :
 			  alarm:=alarm,
 			  pathfinder:=pathfinder, family_number:=i,
 			  integrationPath:=integrationPaths[i],
-			  pole_order_bound:=pole_order_bound,
+			  pole_order_bound:=pob,
 			  reduce_initials:=reduce_initials,
 			  precision:=precision,
 			  f1_is_smooth:=f1_is_smooth);
