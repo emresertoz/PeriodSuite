@@ -1557,9 +1557,9 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
       pob:=0; // pole order bound
       f1_is_smooth:=target_is_smooth;
       if i eq (#path-1) then
-        pob:=pole_order_bound;
+        pob:=bound_pole_order select Ceiling(n/2) else 0;;
       else
-        pob:=false;
+        pob:=0;
       end if;
       
       ivps:=ConstructIVPs(path[i],path[i+1] :
