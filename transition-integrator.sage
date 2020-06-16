@@ -154,7 +154,7 @@ def integrate_ode(ode_label, path):
         
     # Status update.
     max_err = max(x.diameter() for x in transition_mat.list())
-    print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
+    print("    ODE {:<8} is complete. Max error: {}".format(str(label), max_err))
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
     transition_row = ARBMatrixCerealWrap(matrix(transition_mat.row(0)*initial_conditions))
@@ -206,7 +206,7 @@ if __name__ == '__main__':
         label      = solution[-1]
         tms[label] = solution[0]
 
-    print "Integration completed in",time.time()-t0,"seconds."
+    print("Integration completed in",time.time()-t0,"seconds.")
     
 
 def ith_compatible_matrix(i):
@@ -229,12 +229,11 @@ def ith_compatible_matrix(i):
     return change_coordinates*tm
 
 ## Write to file.
-print "Rearranging the matrices. Writing to file..."
+print("Rearranging the matrices. Writing to file...")
 
-with open(ivpdir+"transition_mat.sobj",'w') as outfile:
-    total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
-    pickle.dump(ARBMatrixCerealWrap(total_transition_mat), outfile)
+total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
+save(ARBMatrixCerealWrap(total_transition_mat), ivpdir+"transition_mat.sobj")
 
-    #TODO: Also save the digit_precision somewhere sensible.
+#TODO: Also save the digit_precision somewhere sensible.
 
 exit()
