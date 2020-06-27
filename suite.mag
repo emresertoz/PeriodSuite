@@ -193,8 +193,7 @@ end intrinsic;
 intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 {
   Takes a nested list of polynomials L and returns the GD reduction of these polynomials on f in the same nesting structure of L. Depth is the number of layers of the nested list L, where depth=0 means L is a polynomial.
-}
-
+} 
 
   P:=Parent(f);
   Q:=CoefficientRing(P);
@@ -329,7 +328,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     return &+[delTHomForm(c) : c in comps];
   end function;
 
-  // Check independence of the form `f` in the matrix ot forms `M`.
+  // Check independence of the form `f` in the matrix of forms `M`.
   // Return a boolean and an updated matrix-of-forms `M`
   function cumulativeIsIndependent(M, mons, f)
 
@@ -2956,13 +2955,14 @@ intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
 {
   Checks if the periods of X and Y can be transformed to one another by an integral change of basis. We use the transcendental lattice to avoid superflous relations coming from the Neron--Severi group.
 }
-  
+
+
+  vx,Tx,Lx := transcendental_periods_of_k3(X);
+  vy,Ty,Ly := transcendental_periods_of_k3(Y);
   if not X`hodgeLattice`rank eq Y`hodgeLattice`rank then
     return false,[];
   end if;
 
-  vx,Tx,Lx := transcendental_periods_of_k3(X);
-  vy,Ty,Ly := transcendental_periods_of_k3(Y);
   precision:=Minimum(X`precision,Y`precision);
   CC<I>:=ComplexField(precision);
   r := Ncols(Lx);
