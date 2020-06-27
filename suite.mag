@@ -2956,8 +2956,12 @@ intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
   Checks if the periods of X and Y can be transformed to one another by an integral change of basis. We use the transcendental lattice to avoid superflous relations coming from the Neron--Severi group.
 }
 
-  X:=HodgeLattice(X);
-  Y:=HodgeLattice(Y);
+  if not assigned X`hodgeLattice then
+    X:=HodgeLattice(X);
+  end if;
+  if not assigned Y`hodgeLattice then
+    Y:=HodgeLattice(Y);
+  end if;
   if not X`hodgeLattice`rank eq Y`hodgeLattice`rank then
     return false,[];
   end if;
