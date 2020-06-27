@@ -222,12 +222,15 @@ intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 
   // reduce a form p*Omega/f^l
   function GD(p)
+    if p eq 0 then
+      return 0;
+    end if;
     q:=R!0;
     repeat 
-    pTop := HomogeneousComponent(p,Degree(p));
-    a,b:=GDhom(pTop);
-    p := p-pTop+b;
-    q := q+a;
+      pTop := HomogeneousComponent(p,Degree(p));
+      a,b:=GDhom(pTop);
+      p := p-pTop+b;
+      q := q+a;
     until p eq (R!0);
     return q;
   end function;
@@ -296,6 +299,9 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
 
   // reduce a form p*Omega/f^l
   function GD(p)
+    if p eq 0 then
+      return 0;
+    end if;
     q:=R!0;
     repeat 
       pTop := HomogeneousComponent(p,Degree(p));
