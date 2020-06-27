@@ -2951,7 +2951,37 @@ intrinsic transcendental_periods_of_k3(X::Any) -> Any, Any, Any
   return Matrix(X`periods[1])*Transpose(ChangeRing(T,CC)), T, L;
 end intrinsic;
 
-intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
+intrinsic endomorphisms_of_k3s(X::Any,Y::Any) -> BoolElt, Any
+{
+  Checks if the periods of X and Y can be transformed to one another by an integral change of basis. We use the transcendental lattice to avoid superflous relations coming from the Neron--Severi group.
+}
+
+  if not assigned X`hodgeLattice then
+    X:=HodgeLattice(X);
+  end if;
+  if not assigned Y`hodgeLattice then
+    Y:=HodgeLattice(Y);
+  end if;
+  if not X`hodgeLattice`rank eq Y`hodgeLattice`rank then
+    return false,[];
+  end if;
+
+  vx,Tx,Lx := transcendental_periods_of_k3(X);
+  vy,Ty,Ly := transcendental_periods_of_k3(Y);
+  precision:=Minimum(X`precision,Y`precision);
+
+  try
+    _,_,M:=Monodromy(vx,vy,precision);
+    return true, M;
+  catch e
+    return false;
+  end try;
+
+end intrinsic;
+
+
+
+intrinsic endomorphisms_of_k3s(X::Any,Y::Any) -> BoolElt, Any
 {
   Checks if the periods of X and Y can be transformed to one another by an integral change of basis. We use the transcendental lattice to avoid superflous relations coming from the Neron--Severi group.
 }
@@ -2996,7 +3026,3 @@ intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
 
   return true, E;
 end intrinsic;
-
-
-
-
