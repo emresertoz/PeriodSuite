@@ -193,8 +193,7 @@ end intrinsic;
 intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 {
   Takes a nested list of polynomials L and returns the GD reduction of these polynomials on f in the same nesting structure of L. Depth is the number of layers of the nested list L, where depth=0 means L is a polynomial.
-}
-
+} 
 
   P:=Parent(f);
   Q:=CoefficientRing(P);
@@ -222,12 +221,15 @@ intrinsic GriffithsDwork(L::Any,f::RngMPolElt : depth:=0) -> SeqEnum
 
   // reduce a form p*Omega/f^l
   function GD(p)
+    if p eq 0 then
+      return 0;
+    end if;
     q:=R!0;
     repeat 
-    pTop := HomogeneousComponent(p,Degree(p));
-    a,b:=GDhom(pTop);
-    p := p-pTop+b;
-    q := q+a;
+      pTop := HomogeneousComponent(p,Degree(p));
+      a,b:=GDhom(pTop);
+      p := p-pTop+b;
+      q := q+a;
     until p eq (R!0);
     return q;
   end function;
@@ -296,6 +298,9 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
 
   // reduce a form p*Omega/f^l
   function GD(p)
+    if p eq 0 then
+      return 0;
+    end if;
     q:=R!0;
     repeat 
       pTop := HomogeneousComponent(p,Degree(p));
@@ -323,7 +328,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
     return &+[delTHomForm(c) : c in comps];
   end function;
 
-  // Check independence of the form `f` in the matrix ot forms `M`.
+  // Check independence of the form `f` in the matrix of forms `M`.
   // Return a boolean and an updated matrix-of-forms `M`
   function cumulativeIsIndependent(M, mons, f)
 
@@ -2917,4 +2922,77 @@ intrinsic grevlex_periods_of_fermat(f::RngMPolElt : precision:=100) -> Any
   cohom_basis:=FermatCohomologyBasis(f);
   periods:=massIntegrate([ [w] : w in cohom_basis],Degree(f), Coefficients(f) : precision:=precision);
   return Matrix([ p[1] : p in periods]);
+end intrinsic;
+
+
+
+/////// Check if two K3s are isomorphic
+
+intrinsic transcendental_lattice(X::Any) -> Any,Any
+{
+  Computes the transcendental lattice of a hypersurface. That is the ortohonal complement of its lattice of Hodge cycles. The input X is a PeriodBundle (record). 
+}
+/// return the basis for the transcendental lattice in H_2(X,ZZ), and the intersection product in this basis
+  if not assigned X`hodgeLattice then
+    X:=HodgeLattice(X);
+  end if;
+  II:=X`intersectionMatrix;
+  T:=Matrix(Basis(Kernel(Transpose(Matrix(X`hodgeLattice`basis)*II))));
+  return T, T*II*Transpose(T);
+end intrinsic;
+
+intrinsic transcendental_periods_of_k3(X::Any) -> Any, Any, Any
+{
+ Computes an integral basis for the transcendental basis for the K3 and outputs its period vector in this basis.
+}
+/// returns the period vector of a k3 in a basis for its transcendental lattice
+  T,L := transcendental_lattice(X);
+  CC:=Parent(X`periods[1,1]);
+  return Matrix(X`periods[1])*Transpose(ChangeRing(T,CC)), T, L;
+end intrinsic;
+
+intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
+{
+  Checks if the periods of X and Y can be transformed to one another by an integral change of basis. We use the transcendental lattice to avoid superflous relations coming from the Neron--Severi group.
+}
+
+  if not assigned X`hodgeLattice then
+    X:=HodgeLattice(X);
+  end if;
+  if not assigned Y`hodgeLattice then
+    Y:=HodgeLattice(Y);
+  end if;
+  if not X`hodgeLattice`rank eq Y`hodgeLattice`rank then
+    return false,[];
+  end if;
+
+  vx,Tx,Lx := transcendental_periods_of_k3(X);
+  vy,Ty,Ly := transcendental_periods_of_k3(Y);
+  precision:=Minimum(X`precision,Y`precision);
+  CC<I>:=ComplexField(precision);
+  r := Ncols(Lx);
+  P:=PolynomialRing(CC,r^2);
+  N:=Matrix(r,r,[P.i : i in [1..r^2]]);
+
+  vxP:=ChangeRing(vx,P);
+  vyP:=ChangeRing(vy,P);
+  LyP:=ChangeRing(Ly,P); //// CAREFUL!
+
+  /// Sorcery: Look at Section 2, Equation 2.9 of Lairez--Sertoz 2019
+  rels:=(vyP*LyP*Transpose(vxP*N))*vyP - (vyP*LyP*Transpose(vyP))*vxP*N;
+  M:=Matrix(r,r^2,[Coefficients(rr) : rr in Eltseq(rels)]);
+  num,E:=LatticeOfRelations(M, precision);
+
+  if num eq 0 then
+    return false,[];
+  end if;
+
+  /// sanity check
+  E:=[Matrix(r,r,e) : e in E];
+  assert &and([Rank(e) eq r : e in E]); /// endomorphisms of the transcendental lattice are invertible
+
+  /// Todo:
+  /// Would be neat to construct the endomorphism fields while we are at it
+
+  return true, E;
 end intrinsic;
