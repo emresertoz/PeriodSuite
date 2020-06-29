@@ -3001,14 +3001,17 @@ end intrinsic;
 
 intrinsic CreatePeriodBundle(f::RngMPolElt : precision:=0, primitivePeriods:=0) -> Any
 {
-  Creates the default period bundle for the hypersurface cut out by f. 
+  Creates the default period bundle for the hypersurface cut out by f. The grevlex cohomology basis is used.
 }
 
 
   n:=Ngens(Parent(f))-2;
   d:=Degree(f);
   phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
-  X:=rec<PeriodBundle | equation:=f,dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB>;
+  X:=rec<PeriodBundle | equation:=f,dimension:=n,degree:=d, 
+        primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
+        cohomBasis:=ComputeCohomologyBasis(f);
+        >;
 
   if not primitivePeriods eq 0 then
     if precision eq 0 then
