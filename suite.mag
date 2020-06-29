@@ -2996,3 +2996,30 @@ intrinsic isomorphism_of_k3s(X::Any,Y::Any) -> BoolElt, Any
 
   return true, E;
 end intrinsic;
+
+
+
+intrinsic CreatePeriodBundle(f::RngMPolElt : precision:=0, primitivePeriods:=0) -> Any
+{
+  Creates the default period bundle for the hypersurface cut out by f. 
+}
+
+
+  n:=Ngens(Parent(f))-2;
+  d:=Degree(f);
+  phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
+  X:=rec<PeriodBundle | equation:=f,dimension:=n,degree:=d, primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB>;
+
+  if not primitivePeriods eq 0 then
+    if precision eq 0 then
+      precision:=Precision(primitivePeriods);
+    end if;
+    X`primitivePeriods:=primitivePeriods;
+    X`precision:=precision;
+    X:=PrimitiveToComplete(X);
+    X`periods:=X`primitivePeriods*ChangeRing(X`primitiveToComplete,Parent(X`primitivePeriods[1,1]));
+  end if;
+
+  return X;
+
+end intrinsic;
