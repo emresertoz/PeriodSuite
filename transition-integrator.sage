@@ -8,7 +8,7 @@ from SAGE_CONFIG import *
 myargv = sys.argv[1:]
 
 # Parse the input configuration.
-opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
+opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout=", "digit-precision="])
 
 # Check to make sure nothing bad happened.
 if not args == []:
@@ -24,6 +24,7 @@ for opt, arg in opts:
 
     elif opt == "--digit-precision":
         digit_precision = int(arg)
+
     else:
         print("ERROR: Invalid option: {}".format(opt))
         sys.exit(1)
@@ -53,6 +54,7 @@ except NameError:
 # Begin main script.
 
 load(pathToSuite + "voronoi_path.sage")
+load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
 import time
 import pickle
@@ -72,10 +74,9 @@ load(ivpdir+"meta.sage")
 
 # We ignore the precision field in the meta file, using the passed parameter instead.
 precision       = digit_precision
-bit_precision   = ceil(log(10^(digit_precision+10))/log(2))+100
+bit_precision   = ceil(log(10^(digit_precision+10), 2)) + 100
 field           = ComplexBallField(bit_precision)
 
-load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
 """
 An ode label is of the form (step_number, equation_number). The (i,j)-th equation is the $j$-th ode
