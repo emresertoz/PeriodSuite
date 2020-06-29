@@ -3010,7 +3010,7 @@ intrinsic CreatePeriodBundle(f::RngMPolElt : precision:=0, primitivePeriods:=0) 
   phamB,intmat:=WriteToFileHomAndCohOfFermat(n,d); 
   X:=rec<PeriodBundle | equation:=f,dimension:=n,degree:=d, 
         primitiveIntersectionMatrix:=Matrix(intmat),phamBasis:=phamB,
-        cohomBasis:=ComputeCohomologyBasis(f);
+        cohomBasis:=ComputeCohomologyBasis(f)
         >;
 
   if not primitivePeriods eq 0 then
