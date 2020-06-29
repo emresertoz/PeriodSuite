@@ -22,6 +22,8 @@ for opt, arg in opts:
     elif opt == "--ivpdir":
         ivpdir = arg
 
+    elif opt == "--digit-precision":
+        digit_precision = int(arg)
     else:
         print("ERROR: Invalid option: {}".format(opt))
         sys.exit(1)
@@ -67,8 +69,10 @@ print("Beginning integration...")
 # reduce
 load(ivpdir+"meta.sage")
 
-digit_precision = precision
-bit_precision   = ceil(log(10^(precision+10))/log(2))+100
+
+# We ignore the precision field in the meta file, using the passed parameter instead.
+precision       = digit_precision
+bit_precision   = ceil(log(10^(digit_precision+10))/log(2))+100
 field           = ComplexBallField(bit_precision)
 
 load(pathToSuite + "arb_matrix_cereal_wrap.sage")
@@ -146,7 +150,7 @@ def integrate_ode(ode_label, path):
     initial_conditions = Matrix(init)
     #path, singpts = voronoi_path(singular_locus)
     
-    transition_mat = complex_numerical_transition_matrix(ode, path, precision)
+    transition_mat = complex_numerical_transition_matrix(ode, path, digit_precision)
 
     # Harmonize base rings.
     if not is_exact_ring(initial_conditions.base_ring()):
@@ -164,8 +168,8 @@ def integrate_ode(ode_label, path):
 
 
 """ Formatted return of the ODE solver. """
-def complex_numerical_transition_matrix(ode, path, precision):
-    tm = ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+def complex_numerical_transition_matrix(ode, path, digit_precision):
+    tm = ode.numerical_transition_matrix(path, 10^(-digit_precision), assume_analytic=true)
     return  tm.change_ring(ComplexBallField(tm.base_ring().precision()))
 
 def is_exact_ring(ring):
