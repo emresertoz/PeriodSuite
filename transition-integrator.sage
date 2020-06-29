@@ -123,8 +123,6 @@ def common_voronoi_path(ivps):
 
 # For the sake of code clarity, we pass the value back as a proper function call.
 # Alternatively, the rows can be written to files to be dealt with later instead.
-#
-# TODO: Create Voronoi path first, then pass to function.
 from parse_suite_data import *
 def integrate_ode(ode_label, path):
     print("Integration started")    
@@ -238,7 +236,5 @@ print("Rearranging the matrices. Writing to file...")
 
 total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
 save(ARBMatrixCerealWrap(total_transition_mat), ivpdir+"transition_mat.sobj")
-
-#TODO: Also save the digit_precision somewhere sensible.
 
 exit()
