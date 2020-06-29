@@ -48,7 +48,7 @@ def integrate_ode(ode_label):
         return integrate_ode_with_loop(ode_label)
     tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
     #print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
-    print "ODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
+    print("ODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list()))
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
@@ -69,7 +69,7 @@ def integrate_ode_with_loop(ode_label):
     #print "\tODE", label, "loop completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
     tm3=ode.numerical_transition_matrix(path3, 10^(-precision), assume_analytic=true)
     max_err=max([max(tm.apply_map(lambda x : x.diameter()).list()) for tm in [tm1,tm2,tm3]])
-    print "\tODE", label, "loop and limit completed. Max error: ", max_err
+    print("\tODE", label, "loop and limit completed. Max error: ", max_err)
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm1.parent().base().precision()),M.nrows(),M.ncols())(M)
@@ -98,12 +98,12 @@ def construct_matrix(keys, dictionary):
     return convert_to_matrix_with_error(mat,err)
 
 def compute_periods_of_fermat():
-    print "Computing periods of Fermat"
+    print("Computing periods of Fermat")
     t0=time.time()
     load(pathToSuite+"fermat_periods.sage")
     # fermat_type and the degree d of fermat are loaded from the file "meta.sage"
     fermat_period_matrix=periods_of_fermat(fermat_type)
-    print "Fermat periods computed in", time.time() -t0, "seconds."
+    print("Fermat periods computed in", time.time() -t0, "seconds.")
     fpm_rows=fermat_period_matrix.nrows()
     fpm_cols=fermat_period_matrix.ncols()
     return MatrixSpace(field,fpm_rows,fpm_cols)(fermat_period_matrix);
@@ -112,7 +112,7 @@ def output_to_file(periods,filename):
     output_file = open(ivpdir+filename,'w')
     maximal_error=max(periods.apply_map(lambda x : x.diameter()).list());
     periods_mid=periods.apply_map(lambda x : x.mid());
-    print "Accumulated maximal error:", maximal_error
+    print("Accumulated maximal error:", maximal_error)
     if maximal_error == 0:
         attained_precision=precision
     else:
@@ -121,7 +121,7 @@ def output_to_file(periods,filename):
     digits=ceil(attained_precision*1.2);
     output_file.write(str(digits)+"\n")
     t0=time.time()
-    print "Writing the periods to file."
+    print("Writing the periods to file.")
     numrows=periods_mid.nrows()
     numcols=periods_mid.ncols()
     for i in [1..numrows]:
@@ -157,9 +157,9 @@ for solution in integrate_ode(ivps):
         final_odes[label]=solution[-1][3]
     else:
         tms[label]=solution[-1][0]
-print "Integration completed in",time.time()-t0,"seconds."
-loop_keys=loops.keys()
-loop_keys.sort()
+print("Integration completed in",time.time()-t0,"seconds.")
+loop_keys = sorted(loops.keys())
+#loop_keys.sort()
 
 ## Transition matrices made compatible with base changes
 base_change_files=[]
@@ -174,7 +174,7 @@ keys=tms.keys()
 steps=len(base_change_files)
 compatible_tms=[1..steps]
 
-print "rearranging the matrices"
+print("rearranging the matrices")
 for i in [1..steps]:
     nrows=max([k[1] for k in keys if k[0] == i])
     #ncols=len(tms[(i,1)][0])
@@ -234,7 +234,7 @@ def monodromy(mat1,mat2):
     assert mat1.nrows() == mat2.nrows()
     rels=left_integral_kernel(block_matrix([[mat1,mat2]]).transpose()).transpose()
     if (rels.nrows(), rels.ncols()) != (2*ncol,ncol):
-        raise ValueError, "The two matricies have more than one relation, we can not deduce the monodromy operator"
+        raise(ValueError, "The two matricies have more than one relation, we can not deduce the monodromy operator")
     else:
         B1=rels.submatrix(0,0,ncol,ncol)
         B2=-rels.submatrix(ncol,0,ncol,ncol)
@@ -252,10 +252,10 @@ def logarithm_of_monodromy(T):
 
 def limit_in_grassmanian(V):
     minors=V.minors(dimp)
-    print minors
+    print(minors)
     leading=min([a.low_degree(x-1) for a in minors])
-    print "leading order"
-    print leading
+    print("leading order")
+    print(leading)
     limit=[field(a.coefficient((x-1)^leading)) for a in minors]
     if leading == 0:
         limit=[field(a.substitute({(x-1):0}).substitute({x:1})) for a in minors]
