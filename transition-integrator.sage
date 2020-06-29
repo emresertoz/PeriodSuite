@@ -8,7 +8,7 @@ from SAGE_CONFIG import *
 myargv = sys.argv[1:]
 
 # Parse the input configuration.
-opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
+opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout=", "digit-precision="])
 
 # Check to make sure nothing bad happened.
 if not args == []:
@@ -21,6 +21,9 @@ for opt, arg in opts:
     
     elif opt == "--ivpdir":
         ivpdir = arg
+
+    elif opt == "--digit-precision":
+        digit_precision = int(arg)
 
     else:
         print("ERROR: Invalid option: {}".format(opt))
@@ -51,6 +54,7 @@ except NameError:
 # Begin main script.
 
 load(pathToSuite + "voronoi_path.sage")
+load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
 import time
 import pickle
@@ -67,11 +71,12 @@ print("Beginning integration...")
 # reduce
 load(ivpdir+"meta.sage")
 
-digit_precision = precision
-bit_precision   = ceil(log(10^(precision+10))/log(2))+100
+
+# We ignore the precision field in the meta file, using the passed parameter instead.
+precision       = digit_precision
+bit_precision   = ceil(log(10^(digit_precision+10), 2)) + 100
 field           = ComplexBallField(bit_precision)
 
-load(pathToSuite + "arb_matrix_cereal_wrap.sage")
 
 """
 An ode label is of the form (step_number, equation_number). The (i,j)-th equation is the $j$-th ode
@@ -146,7 +151,7 @@ def integrate_ode(ode_label, path):
     initial_conditions = Matrix(init)
     #path, singpts = voronoi_path(singular_locus)
     
-    transition_mat = complex_numerical_transition_matrix(ode, path, precision)
+    transition_mat = complex_numerical_transition_matrix(ode, path, digit_precision)
 
     # Harmonize base rings.
     if not is_exact_ring(initial_conditions.base_ring()):
@@ -154,7 +159,7 @@ def integrate_ode(ode_label, path):
         
     # Status update.
     max_err = max(x.diameter() for x in transition_mat.list())
-    print "\tODE {:8} is complete. Max error: {}".format(label, max_err)
+    print("    ODE {:<8} is complete. Max error: {}".format(str(label), max_err))
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
     transition_row = ARBMatrixCerealWrap(matrix(transition_mat.row(0)*initial_conditions))
@@ -164,8 +169,8 @@ def integrate_ode(ode_label, path):
 
 
 """ Formatted return of the ODE solver. """
-def complex_numerical_transition_matrix(ode, path, precision):
-    tm = ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+def complex_numerical_transition_matrix(ode, path, digit_precision):
+    tm = ode.numerical_transition_matrix(path, 10^(-digit_precision), assume_analytic=true)
     return  tm.change_ring(ComplexBallField(tm.base_ring().precision()))
 
 def is_exact_ring(ring):
@@ -206,7 +211,7 @@ if __name__ == '__main__':
         label      = solution[-1]
         tms[label] = solution[0]
 
-    print "Integration completed in",time.time()-t0,"seconds."
+    print("Integration completed in",time.time()-t0,"seconds.")
     
 
 def ith_compatible_matrix(i):
@@ -229,12 +234,11 @@ def ith_compatible_matrix(i):
     return change_coordinates*tm
 
 ## Write to file.
-print "Rearranging the matrices. Writing to file..."
+print("Rearranging the matrices. Writing to file...")
 
-with open(ivpdir+"transition_mat.sobj",'w') as outfile:
-    total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
-    pickle.dump(ARBMatrixCerealWrap(total_transition_mat), outfile)
+total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
+save(ARBMatrixCerealWrap(total_transition_mat), ivpdir+"transition_mat.sobj")
 
-    #TODO: Also save the digit_precision somewhere sensible.
+#TODO: Also save the digit_precision somewhere sensible.
 
 exit()
