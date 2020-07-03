@@ -3026,3 +3026,136 @@ intrinsic CreatePeriodBundle(f::RngMPolElt : precision:=0, primitivePeriods:=0) 
   return X;
 
 end intrinsic;
+
+/////////////////////
+///// Endomorphism of transcendental lattice of K3s
+/////////////////////
+
+///// Endomorphism of transcendental lattice of K3s
+/////
+///// This section on endomorphisms is adapted from Pierre Lairez'
+///// https://gitlab.inria.fr/lairez/numperiods/-/blob/master/numperiods/periods.py
+/////
+/////
+
+intrinsic left_inverse(M :: Any) -> Any,Any
+{
+  Takes a matrix and returns its left inverse if it is well defined, throws an error otherwise. To avoid issues with inverting elements, we return A,d so that 1/d*A is the left inverse. 
+}
+  N:=Transpose(M); 
+  NM:=N*M;
+  //linv:=Determinant(NM)^-1*(Adjoint(NM)*N);
+  linv:=Adjoint(NM)*N;
+  det:=Determinant(NM);
+  assert linv*M eq det;
+  return linv,det;
+end intrinsic;
+
+intrinsic right_inverse(M :: Any) -> Any,Any
+{
+  Takes a matrix and returns its right inverse if it is well defined, throws an error otherwise. To avoid issues with inverting elements, we return A,d so that 1/d*A is the left inverse. 
+}
+
+  linv,det:=left_inverse(Transpose(M));
+  return Transpose(linv),det;
+end intrinsic;
+
+intrinsic iso_of_k3s(X::Any,Y::Any) -> BoolElt
+{
+  Takes two PeriodBundle record objects representing two K3 surfaces. Checks if these K3s appear to be isomorphic based on their periods.  
+}
+  assert X`degree eq 4; X`dimension eq 2;
+  assert Y`degree eq 4; X`dimension eq 2;
+  u := transcendental_periods_of_k3(X);
+  v := transcendental_periods_of_k3(Y);
+  precision:=Minimum(X`precision,Y`precision);
+  CC<I>:=ComplexField(precision);
+  r := Ncols(u);
+  P:=PolynomialRing(CC,2*r);
+  N:=Matrix(2,r,[P.i : i in [1..Ngens(P)]]);
+  lat:=StandardLattice(r);
+  uPt:=Transpose(ChangeRing(u,P));
+  vPt:=Transpose(ChangeRing(v,P));
+  for i in [2..r] do
+    det:=Determinant(HorizontalJoin(N*uPt,Matrix(vPt[[1,i]])));
+    cofs:=[MonomialCoefficient(det,P.s) : s in [1..Ngens(P)]];
+    a,b:=LatticeOfRelations(Matrix([cofs]), precision);
+    if a eq 0 then
+      return false;
+    end if;
+    b1:=Submatrix(Matrix(b),1,1,a,r);
+    lat:=sub<lat|Rows(b1)>;
+    if Rank(lat) eq 0 then
+      return false;
+    end if;
+  end for;
+  return true;
+end intrinsic;
+
+
+intrinsic endo_field_from_generators(E::SeqEnum : optimized:=true) -> FldNum
+{
+  Given the generators of an endomorphism ring of a K3, as a sequence of matrices, returns the number field that represents this field. If optimized is true, optimizes the representation of this field.
+}
+  r:=Ncols(E[1]);
+  i:=#E; e:=0; d:=0;
+  while d lt #E do
+    e:=e+E[i];
+    p:=MinimalPolynomial(e);
+    d:=Degree(p);
+    i:=i eq #E select 1 else i+1;
+  end while;
+  K<t>:=NumberField(p);
+  if optimized then
+    KK<t>:=OptimizedRepresentation(K);
+    return KK;
+  else
+    return K;
+  end if;
+end intrinsic;
+
+intrinsic endo_of_transcendental_lattice(X::Any : optimized:=true) -> SeqEnum, FldNum
+{
+  Given a PeriodBundle record representing a K3 surface, computes the endomorphisms of the transcendental lattice of K3. 
+}
+  assert X`degree eq 4; X`dimension eq 2;
+  u := transcendental_periods_of_k3(X);
+  precision:=X`precision;
+  CC<I>:=ComplexField(precision);
+  r := Ncols(u);
+  P:=PolynomialRing(CC,2*r);
+  N:=Matrix(2,r,[P.i : i in [1..Ngens(P)]]);
+  lat:=StandardLattice(r);
+  maps:=[];
+  uPt:=Transpose(ChangeRing(u,P));
+  for i in [2..r] do
+    det:=Determinant(HorizontalJoin(N*uPt,Matrix(uPt[[1,i]])));
+    cofs:=[MonomialCoefficient(det,P.s) : s in [1..Ngens(P)]];
+    a,b:=LatticeOfRelations(Matrix([cofs]), precision);
+    b1:=Submatrix(Matrix(b),1,1,a,r);
+    b2:=Submatrix(Matrix(b),1,r+1,a,r);
+    print b1, b2;
+    print i;
+    rinv,det:=right_inverse(b1);
+    m:=1/det*ChangeRing(rinv*b2,Rationals()); // b1*m=b2
+    Append(~maps,m);
+    lat:=sub<lat|Rows(b1)>;
+    if Rank(lat) eq 1 then
+      return [IdentityMatrix(Rationals(),r)], Rationals();
+    end if;
+  end for;
+  E:=[];
+  for b in Basis(lat) do
+    bQ:=ChangeRing(b,Rationals());
+    e:=[bQ];
+    for m in maps do
+      Append(~e,bQ*m);
+    end for;
+    Append(~E,Matrix(e));
+  end for;
+  return E, endo_field_from_generators(E : optimized:=optimized);
+end intrinsic;
+
+/////////////////////
+///// end of endomorphism of transcendental lattice of K3s
+/////////////////////
