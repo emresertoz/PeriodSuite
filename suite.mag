@@ -3032,10 +3032,9 @@ end intrinsic;
 ///// Endomorphism of transcendental lattice of K3s
 /////////////////////
 
-///// Endomorphism of transcendental lattice of K3s
+///// Endomorphisms of transcendental lattices of K3s
 /////
-///// This section on endomorphisms is adapted from Pierre Lairez'
-///// https://gitlab.inria.fr/lairez/numperiods/-/blob/master/numperiods/periods.py
+///// This section on endomorphisms implements the algorithm communicated to us by Pierre Lairez.
 /////
 /////
 
