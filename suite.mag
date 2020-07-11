@@ -1286,7 +1286,7 @@ intrinsic ScientificNotation(r::FldReElt : base:=10) -> RngIntElt, RngIntElt
   return Round(r*base^(-i+3))*base^-3,i;
 end intrinsic;
 
-intrinsic ClearDenominatorsOfPolynomial(pol::RingUPolElt) -> RngUPolElt
+intrinsic ClearDenominatorsOfPolynomial(pol::Any) -> RngUPolElt
 {
   Clears the denominators of the input polynomial. The coefficients may be from any field where "ClearDenominator" works.
 }
