@@ -299,7 +299,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   // reduce a form p*Omega/f^l
   function GD(p)
     if p eq 0 then
-      return 0;
+      return R!0;
     end if;
     q:=R!0;
     repeat 
