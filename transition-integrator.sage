@@ -54,7 +54,9 @@ except NameError:
 # Begin main script.
 
 load(pathToSuite + "voronoi_path.sage")
-load(pathToSuite + "arb_matrix_cereal_wrap.sage")
+#load(pathToSuite + "arb_matrix_cereal_wrap.sage")
+
+import arb_matrix_cereal_wrap as amcw
 
 import time
 import pickle
@@ -160,7 +162,7 @@ def integrate_ode(ode_label, path):
     print("    ODE {:<8} is complete. Max error: {}".format(str(label), max_err))
     
     # due to a bug with the Arb-Sage interface, convert to a portable object.
-    transition_row = ARBMatrixCerealWrap(matrix(transition_mat.row(0)*initial_conditions))
+    transition_row = amcw.ARBMatrixCerealWrap(matrix(transition_mat.row(0)*initial_conditions))
         
     return [transition_row,False,label] 
 #####
@@ -235,6 +237,6 @@ def ith_compatible_matrix(i):
 print("Rearranging the matrices. Writing to file...")
 
 total_transition_mat = prod(ith_compatible_matrix(i) for i in range(steps))
-save(ARBMatrixCerealWrap(total_transition_mat), ivpdir+"transition_mat.sobj")
+save(amcw.ARBMatrixCerealWrap(total_transition_mat), ivpdir+"transition_mat.sobj")
 
 exit()
