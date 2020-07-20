@@ -125,7 +125,7 @@ procedure CarefulInitializeIVPDirectory(name, ivpdir, overwrite)
 	
   // if no name has been specified then set overwrite to true and clear ivpdir
   overwrite:=overwrite or (#name eq 0);
-  deletable_file_globs := ["meta.sage", "IVP-*.sage", "BaseChange-*.sage", "bundle"];
+  deletable_file_globs := ["meta.sage", "IVP-*.sage", "BaseChange-*.sage", "bundle", "periods"];
     
   // Unix conditional check to see if directory exists and if it is safe to overwrite.
   if System("[ -d "*ivpdir*" ]") eq 0 then
@@ -155,11 +155,11 @@ end procedure;
 
 
 // Manage sage subprocess calls.
-intrinsic CallIntegrator(script_name, ivpdir) -> RngIntElt
+intrinsic CallIntegrator(script_name, ivpdir : extra_options:="") -> RngIntElt
 	  {Manage sage subprocess calls.}
 	  
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  cmd_string := Sprintf("%o --ivpdir=%o", PathToSuite()*script_name, ivpdir);
+  cmd_string := Sprintf("%o --ivpdir=%o %o", PathToSuite()*script_name, ivpdir, extra_options);
   return System(Sprintf("$(which sage) %o", cmd_string));
 end intrinsic;
 
@@ -299,7 +299,7 @@ intrinsic PicardFuchs(forms::SeqEnum,f::RngMPolElt : max_order:=0, family_number
   // reduce a form p*Omega/f^l
   function GD(p)
     if p eq 0 then
-      return 0;
+      return R!0;
     end if;
     q:=R!0;
     repeat 
@@ -1511,7 +1511,7 @@ function SingularLocusInFamily(f0,f1)
     return polys;
 end function;
 
-intrinsic TransitionHomotopy(path::[RngMPolElt] :
+intrinsic SageAPITransitionHomotopy(path::[RngMPolElt] :
 			     alarm:=0,
 			     precision:=100, straight:=false,
 			     bound_pole_order:=false,
@@ -1590,8 +1590,9 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
 			     odes:=allODEs,
 			     deformation:=path, cohomBasis:=ivps`movingBasis,
 			     name:=name >;
-  vprintf PicardFuchs : "\nComputation of the differential equations is now complete (%o seconds).\n\n",
-	 Realtime()-tstart;
+
+  msg_format_str := "\nComputation of the differential equations is now complete (%o seconds).\n\n";
+  vprintf PicardFuchs : msg_format_str, Realtime()-tstart;
 
 
   // Integration may crash. Save everything up until this point.
@@ -1603,7 +1604,7 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   ////////////////////////////////////////
   if integrate then
     vprint PicardFuchs : "Starting integration.\n\n";
-    bundle:=SolveTransitionIVPs(bundle);
+    bundle:=SolveTransitionIVPs(bundle, precision);
   end if;
   ////////////////////////////////////////
   ////////////////////////////////////////
@@ -1617,13 +1618,14 @@ intrinsic TransitionHomotopy(path::[RngMPolElt] :
   return bundle, ivpdir;
 end intrinsic;
 
-intrinsic SolveTransitionIVPs(bundle::Any) -> Any
+intrinsic SolveTransitionIVPs(bundle::Any, precision::RngIntElt) -> Any
 {
     Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  error_code:=CallIntegrator("transition-integrator.sage", ivpdir);
+  prec_opts  := "--digit-precision="*Sprint(precision);
+  error_code := CallIntegrator("transition-integrator.sage", ivpdir : extra_options:=prec_opts);
   return bundle;
 end intrinsic;
 
