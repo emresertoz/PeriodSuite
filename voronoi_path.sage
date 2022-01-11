@@ -19,7 +19,7 @@ def voronoi_path(polylist):
     P   = polylist[0].parent()    
     s   = gens(P)[0]
     
-    print "Solving for dangerous points..."
+    print("Solving for dangerous points...")
     for p in polylist:
         p=P(p).radical()
         # numerical instability messes up the roots at 0 and 1, we will add them manually
@@ -38,12 +38,12 @@ def voronoi_path(polylist):
     # Add a bounding box to discourage paths going in off directions
     [[pts.add((R(i),R(j))) for i in {-1,1}] for j in {-1,1}]
 
-    print "Constructing Voronoi diagram..."
+    print("Constructing Voronoi diagram...")
     vd = VoronoiDiagram(pts)
 
-    print "Finding shortest path..."
+    print("Finding shortest path...")
     gr=Graph()
-    for pt_, reg in vd.regions().iteritems():
+    for pt_, reg in vd.regions().items():
         pt = tuple(pt_)
         pt = pt[0] + I*pt[1]
         ptc = CDF(pt)
