@@ -2620,13 +2620,96 @@ intrinsic round(matrix ::ModMatFldElt : dec:=5) -> Any
   return Matrix(Nrows(matrix),Ncols(matrix),[ComplexField(dec)| (Abs(e) lt 10^-dec) select 0 else e : e in Eltseq(matrix)]);
 end intrinsic;
 
+// lattice is a matrix representing the intersection product on the picard group of a k3 surface
+// polarization is the coordinates of a very ample line bundle in the picard group
+// degree is the maximal degree of rational curves which will be computed
+intrinsic P1InK3Lattice(lattice::Any,polarization::Any,degree::RngIntElt) -> Any
+{
+  Computes the smooth rational curves inside the Picard lattice of a K3 surface. 
+  This is the newer version, which might be slower but works for every degree.
+  Implements the method in Lairez--Sertoz, "Numerical transcendental method...", Section 3.
+}
+  // SET-UP
+  // rank of lattice
+  rho:=Ncols(lattice);
+  //basis
+  id:=IdentityMatrix(Integers(),rho);
+  // degree of polarization 
+  d:=norm(polarization,lattice);
+
+  assert degree gt 0; // degree of rational curves needs to be positive
+  
+  if rho eq 1 then return [{} : d in [1..degree]]; end if; // nothing to do here
+
+  // Project the lattice on to the primitive lattice b/c it is negative definite
+  // then scale for performance improvement
+
+  // projection map (scaled by d)
+  // d*id - lattice*polarization
+  proj:=Matrix([ d*e - inner(e,lattice,polarization)*polarization[1] : e in Rows(id) ]);
+  basis:=Matrix(Basis(RowSpace(proj)));
+  prim:=-basis*lattice*Transpose(basis);
+  gcd:=GCD(Eltseq(prim));
+  primReduced:=Matrix(rho-1,rho-1, [Integers()|p/gcd : p in Eltseq(prim)]);
+  L:=Lattice(IdentityMatrix(Integers(),Nrows(basis)),primReduced);
+
+  // Constructing the Md's from the paper, these maybe reducible but if not they would be rational curves
+  // the set "all_curves[d]" is the Md from our paper 
+
+  // This process could possibly be accelerated. Would it be faster to find all short vectors instead of one at a time?
+  all_curves:=[**];
+  for i in [1..degree] do
+    // norm of the projection of a rational curve of degree i is kappa[i]
+    kappa:=(d*(2*d+i^2)/gcd); 
+    if IsIntegral(kappa) then
+      kappa:= Integers()!kappa;
+      sv:=ShortVectors(L,kappa,kappa);
+    else
+      sv:=[];
+    end if;
+    // add or subtract polarization
+    candidates:=[ Matrix(s[1])*basis + i*polarization: s in sv] cat [ Matrix(s[1])*basis - i*polarization : s in sv];
+    // check the ones that would be integral even after dividing by d
+    divisible:=[ Vector(l) : l in candidates | GCD(Eltseq(l)) mod d eq 0 ];
+    // now fix the signs of non-effective classes
+    finalists:=[];
+    for l in divisible do
+      if inner(l,lattice,polarization) gt 0 then
+        Append(~finalists,l);
+      else
+        Append(~finalists,-l);
+      end if;
+    end for;
+    // in case of duplicates, we trim them
+    trim:=Seqset(finalists);
+    // now divide 
+    curves:=[ Vector([Integers()!(e/d) : e in Eltseq(l) ])  : l in trim];
+    Append(~all_curves,curves);
+  end for;
+
+  // Now starting the construction of rational curves, the sequence N from the paper
+  M:=all_curves;
+  N:=[*Seqset(all_curves[1])*]; // N1 = M1
+
+  for ii in [2..degree] do
+    // all vectors in Nd must intersect vectors in Ne for e < d non-negatively.
+    // inner(a,M,b) is the inner product of row vectors a and b wrt the matrix M.
+     Nd:={ m : m in M[ii] | &and[ &and[  inner(m,lattice,n) ge 0  : n in Ne  ]  :   Ne in N] }; 
+     Append(~N,Nd);
+  end for;
+
+  print [#Nd : Nd in N];
+  return [Nd : Nd in N]; // converting the list N to sequence N
+end intrinsic;
+
 
 // lattice is a matrix representing the intersection product on the picard group of a k3 surface
 // polarization is the coordinates of a very ample line bundle in the picard group
 // degree is the maximal degree of rational curves which will be computed
-intrinsic P1InK3Lattice(lattice::Any,polarization::Any:degree:=3) -> Any
+intrinsic P1InK3LatticeOld(lattice::Any,polarization::Any:degree:=3) -> Any
 {
   Computes the smooth rational curves inside the Picard lattice of a K3 surface. (Currently implemented only upto degree three.)
+  This is the older version, which might be faster.
 }
 
   if not degree eq 3 then return Error("Not implemented"); end if;
