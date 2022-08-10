@@ -158,7 +158,7 @@ end procedure;
 
 
 // Manage sage subprocess calls.
-intrinsic CallIntegrator(script_name, ivpdir : extra_options:="") -> RngIntElt
+intrinsic CallIntegrator(ivpdir : extra_options:="", script_name:="src/sage_integrator/integrator.sage") -> RngIntElt
 	  {Manage sage subprocess calls.}
 	  
   print "\n\nStarting SageMath, this may take some time...\n\n";
@@ -1489,10 +1489,6 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   return bundle, ivpdir;
 end intrinsic;
 
-
-//****************************************
-// TransitionHomotopy Section.
-
 // Input: f0,f1
 // Output: A list of polynomials whose roots specify the values of t
 // for which (1-t)*f0 + t*f1 is singular. Usually this is just the list [1].
@@ -1512,127 +1508,6 @@ function SingularLocusInFamily(f0,f1)
     return polys;
 end function;
 
-intrinsic SageAPITransitionHomotopy(path::[RngMPolElt] :
-			     alarm:=0,
-			     precision:=100, straight:=false,
-			     bound_pole_order:=false,
-			     pathfinder:=0, integrationPaths:=[],
-			     reduce_initials:=true, name:="",
-			     overwrite:=false, integrate:=true) -> Any
-{
-    Computes the transition matrices needed to carry periods from paths[1] to paths[#paths].
-}
-  // NOTE: integration paths here means the list of quartics to get from start to finish,
-  //       instead of the real contor inside a P1 used to compute the transition matrices.
-
-  if #path eq 1 then
-    error "Transition Homotopy needs start and endpoint as input. Perhaps you meant PeriodHomotopy?";
-  end if;
-
-  beginningTime:=Realtime();
-  ivpdir:=IVPWorkingDir(:subfolder:=name);
-  CarefulInitializeIVPDirectory(name, ivpdir, overwrite);
-  WriteMetaFile(name, precision, path, reduce_initials);
-    
-  // either the right number of integrationPaths should be provided, or none at all
-  if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
-  assert #integrationPaths eq #path-1; 
-
-
-  target:=path[#path]; 
-  target_is_smooth:=isSmooth(target);
-  P:=Parent(target);
-  n:=Ngens(P)-2;
-  d:=Degree(target); 
-  if d eq 1 then
-    error "Degree of the hypersurface needs to be greater than one.";
-  end if;
-
-  // bounding the pole order of cohomology classes for the target hypersurface accelerates
-  // the procedure, while providing complete information on the Hodge decomposition
-  // but we can only bound pole order, if there is non-zero classes outside of H^{n/2,n/2}
-  if Ceiling(n/2)*d-Ngens(P) lt 0 then bound_pole_order:=false; end if;
-  pole_order_bound:=bound_pole_order select Ceiling(n/2) else 0;
-
-  allODEs:=[];
-  tstart:=Realtime();
-  for i in [1..(#path-1)] do
-      vprint PicardFuchs : "\n\n************************************\nWe are at family number",i,
-	    "out of",#path-1,"\n************************************\n";
-
-      pob:=0; // pole order bound
-      f1_is_smooth:=target_is_smooth;
-      if i eq (#path-1) then
-        pob:=bound_pole_order select Ceiling(n/2) else 0;;
-      else
-        pob:=0;
-      end if;
-      
-      ivps:=ConstructIVPs(path[i],path[i+1] :
-			  alarm:=alarm,
-			  pathfinder:=pathfinder, family_number:=i,
-			  integrationPath:=integrationPaths[i],
-			  pole_order_bound:=pob,
-			  reduce_initials:=reduce_initials,
-			  precision:=precision,
-			  f1_is_smooth:=f1_is_smooth);
-      
-      Append(~allODEs,ivps`ODEs);
-
-      slocus := SingularLocusInFamily(path[i],path[i+1]);
-      WriteIVPsToFile(ivps : number:=i, max_number:=#path-1,
-			     name:=name, singular_locus := slocus);
-
-  end for;
-
-  // define a period bundle
-  bundle:=rec<PeriodBundle | equation:=path[#path],dimension:=n,degree:=d,
-			     primitiveIntersectionMatrix:="", phamBasis:="",
-			     odes:=allODEs,
-			     deformation:=path, cohomBasis:=ivps`movingBasis,
-			     name:=name >;
-
-  msg_format_str := "\nComputation of the differential equations is now complete (%o seconds).\n\n";
-  vprintf PicardFuchs : msg_format_str, Realtime()-tstart;
-
-
-  // Integration may crash. Save everything up until this point.
-  if #name gt 0 then SaveBundle(bundle); end if;
-
-
-  ////////////////////////////////////////
-  /// Integration happens here ///////////
-  ////////////////////////////////////////
-  if integrate then
-    vprint PicardFuchs : "Starting integration.\n\n";
-    bundle:=SolveTransitionIVPs(bundle, precision);
-  end if;
-  ////////////////////////////////////////
-  ////////////////////////////////////////
-
-  pathMons:=[#Monomials(p) : p in path];
-  pathMonsChange:=[#Monomials(path[j]-path[j-1]) : j in [2..#path]];
-  vprint PicardFuchs, 2 : "Used the following path:",path;
-  vprint PicardFuchs, 2 : "The number of monomials appearing at each step:\n",pathMons;
-  vprint PicardFuchs, 2 : "The number of monomials changed at each step:\n",pathMonsChange;
-
-  return bundle, ivpdir;
-end intrinsic;
-
-intrinsic SolveTransitionIVPs(bundle::Any, precision::RngIntElt) -> Any
-{
-    Takes as input the name of the initial value problems which have been saved in storage directory and integrates them. This version takes the period bundle, which is faster than loading in from file.
-}
-  name:=bundle`name;
-  ivpdir:=IVPWorkingDir(:subfolder:=name);
-  prec_opts  := "--digit-precision="*Sprint(precision);
-  error_code := CallIntegrator("transition-integrator.sage", ivpdir : extra_options:=prec_opts);
-  return bundle;
-end intrinsic;
-
-
-//****************************************  End TransitionHomotopy Section.
-
 intrinsic SolveIVPs(name::MonStgElt) -> Any
 {
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
@@ -1650,7 +1525,7 @@ intrinsic SolveIVPs(bundle::Any) -> Any
 }
   name:=bundle`name;
   ivpdir:=IVPWorkingDir(:subfolder:=name);
-  error_code:=CallIntegrator("integrator.sage", ivpdir);
+  error_code:=CallIntegrator(ivpdir);
   
   if isSmooth(bundle`equation) then
     bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
@@ -2957,7 +2832,7 @@ intrinsic transition_matrix(f0::RngMPolElt, f1::RngMPolElt : precision:=100, str
   ////////////////////////////////////////
   /// Integration happens here ///////////
   ////////////////////////////////////////
-  error_code:=CallIntegrator("integrator.sage", ivpdir);
+  error_code:=CallIntegrator(ivpdir);
   ////////////////////////////////////////
   ////////////////////////////////////////
   ivpdir:=IVPWorkingDir(:subfolder:=name);

@@ -1,40 +1,32 @@
 import os, sys, getopt
-from SAGE_CONFIG import *
+from pathToSuite import *
 
 #FIXME
 #temporarily a global variable
 has_loop=False
 
 ############################################################
-# Retrieve ivpdir and timeout from the command line.
+# We retrieve the IVP directory here. There is also a (currently) unusued timeout feature.
 
-# Default options
-myargv = sys.argv[1:]
+# This script is called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
+#               sage integrator.sage --ivpdir="path/to/suite/ode_storage/incinerator/"
 
 # Parse the input configuration.
-opts, args = getopt.getopt(myargv, "", ["ivpdir=", "timeout="])
-
-# Check to make sure nothing bad happened.
-if not args == []:
-    print("ERROR: options misinterpreted as arguments. Please check the input.")
-    sys.exit(1)
-
+opts, _ = getopt.getopt(sys.argv[1:], "", ["ivpdir=", "timeout="])
 for opt, arg in opts:
     if opt == "--timeout":
         timeout = eval(arg)
-    
     elif opt == "--ivpdir":
         ivpdir = arg
-
     else:
         print("ERROR: Invalid option: {}".format(opt))
         sys.exit(1)
-
 ############################################################
 
 ncpus=100
 print("Beginning integration...")
-# ivpdir is defined while this script is called from suite.mag
+# ivpdir is defined above
+# meta stores global information, such as integration precision
 load(ivpdir+"meta.sage")
 
 import time
@@ -78,7 +70,7 @@ def construct_matrix(keys, dictionary):
 def compute_periods_of_fermat():
     print("Computing periods of Fermat")
     t0=time.time()
-    load(pathToSuite+"fermat_periods.sage")
+    load(pathToSuite+"src/sage_integrator/fermat_periods.sage")
     # fermat_type and the degree d of fermat are loaded from the file "meta.sage"
     fermat_period_matrix=periods_of_fermat(fermat_type)
     print("Fermat periods computed in", time.time() -t0, "seconds.")
