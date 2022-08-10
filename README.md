@@ -8,11 +8,11 @@ Picard rank, or more generally Hodge rank, computations are now available with t
 
 ## Requirements
 
-You need a Unix based system, the latest version of [SageMath](http://www.sagemath.org/) and [Magma](https://magma.maths.usyd.edu.au/). 
+You need a Unix based system, [SageMath](http://www.sagemath.org/) version 9+, and [Magma](https://magma.maths.usyd.edu.au/). If you must use SageMath 8+ then checkout and use the branch "2019" instead, however I will not keep that branch up to date. 
 
 ## Installation
 
-1) Clone this repository to a directory.
+1) Clone this repository to a directory. Replace `/path/to/PeriodSuite` below with the path you want to install this package.
 
     ```
     git clone https://github.com/emresertoz/PeriodSuite.git /path/to/PeriodSuite
@@ -24,22 +24,18 @@ You need a Unix based system, the latest version of [SageMath](http://www.sagema
     cd /path/to/PeriodSuite && ./make
     ```
 
-3) Install `ore_algebra--analytic` for the integration step.
-
-    ```
-    sage -pip install --user git+https://github.com/mkauers/ore_algebra.git@analytic
-    ```
-
-The installation is now complete. To use PeriodSuite, open Magma and attach the file `suite.mag` before each session (you may want to add this to your `startup` file). To check if everything is working type `X:=test();`.
+The installation is now complete. To use PeriodSuite, open Magma and attach the file `suite.mag` before each session, see below. You may want to add this to your `startup` file. To check if everything is working type `X:=test();`.
 
     Magma> Attach("suite.mag");
     Magma> X:=test();
 
 #### Remarks:
 
-- The newest, most stable versions of all software used are recommended and often mandatory: SageMath \(v8.1 or higher\) and Magma \(v2.23.8 or higher\). 
+- The newest, most stable versions of all software used are recommended and often mandatory: SageMath \(v9 or higher\) and Magma \(v2.23.8 or higher\). 
 
 - If anything goes wrong please contact me at `emresertoz` at `gmail.com` and I will try to fix the issue.
+
+- If you must use SageMath v8 then type `git checkout 2019` after the first step (but after you `cd` into the PeriodSuite folder). Then type `./make`. This is a commit frozen in time, I do not plan on keeping it up to date.
 
 ******
 
