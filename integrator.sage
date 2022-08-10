@@ -1,6 +1,10 @@
 import os, sys, getopt
 from SAGE_CONFIG import *
 
+#FIXME
+#temporarily a global variable
+has_loop=False
+
 ############################################################
 # Retrieve ivpdir and timeout from the command line.
 
@@ -44,8 +48,6 @@ field=ComplexBallField(bit_precision)
 def integrate_ode(ode_label):
     #print("Old script: Core initiated")
     load(ode_label)
-    if loop_position > -1:
-        return integrate_ode_with_loop(ode_label)
     tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
     #print "\tODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list())
     print("ODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list()))
@@ -53,32 +55,8 @@ def integrate_ode(ode_label):
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
         M=MatrixSpace(ComplexBallField(tm.parent().base().precision()),M.nrows(),M.ncols())(M)
     TM=tm.row(0)*M
-    return [convert(TM),False,label]
+    return [convert(TM),label]
 
-def integrate_ode_with_loop(ode_label):
-    load(ode_label)
-    path1=path[0:loop_position]
-    path2=path[loop_position-1:-1]
-## not super efficient!
-    #path3=[path[loop_position],path[len(path)-1]]
-    #path3=[path[0],path[-1]]
-    path3=path
-    tm1=ode.numerical_transition_matrix(path1, 10^(-precision), assume_analytic=true)
-    #print "\tODE", label, "is completed until loop. Max error: ", max(tm1.apply_map(lambda x : x.diameter()).list())
-    tm2=ode.numerical_transition_matrix(path2, 10^(-precision), assume_analytic=true)
-    #print "\tODE", label, "loop completed. Max error: ", max(tm2.apply_map(lambda x : x.diameter()).list())
-    tm3=ode.numerical_transition_matrix(path3, 10^(-precision), assume_analytic=true)
-    max_err=max([max(tm.apply_map(lambda x : x.diameter()).list()) for tm in [tm1,tm2,tm3]])
-    print("\tODE", label, "loop and limit completed. Max error: ", max_err)
-    M=Matrix(init)
-    if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
-        M=MatrixSpace(ComplexBallField(tm1.parent().base().precision()),M.nrows(),M.ncols())(M)
-    TM1=tm1.row(0)*M
-    TM2=(tm2.row(0)*tm1)*M
-    #TM3=tm3*tm1*M 
-    TM3=tm3*M 
-    return [convert(TM1),convert(TM2),convert(TM3),ode,True,label]
-    
 def convert(cbf_matrix):
     return [cbf_matrix.apply_map(lambda x : x.mid()),cbf_matrix.apply_map(lambda x : x.diameter())]
 
@@ -130,7 +108,7 @@ def output_to_file(periods,filename):
     output_file.close()
 
 
-
+#TODO Some of the dicts below maybe obsolete
 ## Transition matrices but without intermediate base changes
 tms={}
 ## the transition matrices around loops, if any
@@ -146,9 +124,10 @@ for file in os.listdir(ivpdir):
     if file.startswith("IVP-") and file.endswith(".sage"):
         ivps.append(os.path.join(ivpdir,file))
 ivps.sort()
+
 ## most time consuming part
 for solution in integrate_ode(ivps):
-    has_loop=solution[-1][-2]
+    #has_loop=solution[-1][-2] # TODO: you need to fix this, now always false
     label=solution[-1][-1]
     if has_loop:
         tms[label]=solution[-1][0]
@@ -182,7 +161,7 @@ for i in [1..steps]:
     load(base_change_files[i-1])
     compatible_tms[i-1]=change_coordinates*tm_with_error
 compatible_tms.reverse()
-for key in loop_keys:
+for key in loop_keys: # TODO: this has to be rewritted
     [mat,err]=limit_tm[key]
     limit_tm[key]=convert_to_matrix_with_error(mat,err)
 # in case of loop, the last batch of transition matrices gets us to a

@@ -8,6 +8,9 @@ declare verbose PicardFuchs, 2;
 declare verbose AIOutput, 1;
 SAFEOVERWRITECODE := ".PERIODSUITE-this-directory-is-safe-to-rm-fr";
 
+SetVerbose("PicardFuchs",2);
+SetVerbose("AIOutput",1);
+
 //************************************************************************************************
 // Directory management and File I/O
 //************************************************************************************************
@@ -797,7 +800,7 @@ end intrinsic;
 
 
 // initial value problems
-IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid,loop_position>;
+IVPs := recformat<ODEs,movingBasis,inits,changeBasis,t,analytics,integrationPath,pointsToAvoid>;
 
 // construct the initial value problems associated to a straight line homotopy between two hypersurfaces Z(f0) and Z(f1)
 // alarm and max_order if not 0 may kill the Magma session, they must be used within disposable Magma sessions
@@ -847,13 +850,12 @@ intrinsic ConstructIVPs(f0::RngMPolElt, f1::RngMPolElt : alarm:=0, max_order:=0,
 
   // setting up integration paths, unless specified
   avoid:=[];
-  loop_position:=-1;
   if #integrationPath eq 0 then
     // we will use the pathfinder algorithm specified by the integer pathfinder
-    integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder : f1_is_smooth:=f1_is_smooth);
+    integrationPath,avoid:=SetupIntegrationPath(f0,f1,pathfinder : f1_is_smooth:=f1_is_smooth);
   end if;
 
-  ivps:=rec<IVPs | ODEs:=ODEs, movingBasis:=B, inits:=initialConditions, changeBasis:=M, t:=t1-t0, analytics:=Analytics(ODEs),loop_position:=loop_position>;
+  ivps:=rec<IVPs | ODEs:=ODEs, movingBasis:=B, inits:=initialConditions, changeBasis:=M, t:=t1-t0, analytics:=Analytics(ODEs)>;
   ivps`integrationPath:=integrationPath;
   ivps`pointsToAvoid:=avoid;
 
@@ -1330,7 +1332,6 @@ intrinsic WriteIVPsToFile(E::Rec : number:=0, max_number:=0, name:="", singular_
 
     WriteInsideTempFolder(ode_filename, "path="   *Sprint(E`integrationPath)        : name:=name);
     WriteInsideTempFolder(ode_filename, "label=(" *Sprint(number)*","*Sprint(i)*")" : name:=name);
-    WriteInsideTempFolder(ode_filename, "loop_position=" *Sprint(E`loop_position)   : name:=name);
 
     if Type(singular_locus) ne BoolElt then
       WriteInsideTempFolder(ode_filename,"singular_locus="*Sprint(singular_locus) : name:=name);
@@ -1950,20 +1951,14 @@ Computes a sequence of rectilinear paths in the complex plane avoiding any singu
   Cc:=ComplexField(10);
   AssignNames(~Cc,["I"]);
 
-  if f1_is_smooth then
-    PathFinder:=case<pathfinder| 1:PathFinder1, default:PathFinder0>;
-    path,avoid:=PathFinder(f0,f1);
-    avoidPoints:=planeToComplex(avoid);
-    loop_position:=-1;
-  else 
-    path,avoid,loop_position:=FormLoop(f0,f1 : pathfinder:=pathfinder);
-    avoidPoints:=avoid;
-  end if;
+  PathFinder:=case<pathfinder| 1:PathFinder1, default:PathFinder0>;
+  path,avoid:=PathFinder(f0,f1);
+  avoidPoints:=planeToComplex(avoid);
   integrationPath := [Sprint(pt[1] + pt[2]*Cc.1) : pt in path];
   integrationPath[1]:=Sprint(0);
   //if f1_is_smooth then integrationPath[#integrationPath]:=Sprint(1); end if;
   integrationPath[#integrationPath]:=Sprint(1);
-  return integrationPath,avoidPoints,loop_position;
+  return integrationPath,avoidPoints;
 
 end intrinsic;
 
@@ -2386,35 +2381,6 @@ intrinsic CoordinatesInReducedCohomologyBasis(f::RngMPolElt,basis::[RngMPolElt],
   return [Coordinates(W,W!b) : b in rb2];
 end intrinsic;
 
-intrinsic FormLoop(f0::RngMPolElt,f1::RngMPolElt : pathfinder:=0) -> SeqEnum
-{
-  Computes a path which goes from f0 to some g near f1 and loops counterclockwise around f1 back to g. This loop contains no other singular hypersurfaces except f1, which is assumed to be singular.
-}
-  sings:=singularFibersOfPencil(f0,f1);
-  assert 1 in sings;
-  distance_to_closest_singularity:=Sort([Abs(s-1) : s in sings])[2];
-  dist:=1/2*Minimum(0.2,distance_to_closest_singularity);
-  //form a diamond around 1.
-
-  // complex plane
-  V:=VectorSpace(RealField(20),2);
-  loop_head:=[V|[1-dist,0],[1,-dist],[1+dist,0],[1,dist],[1-dist,0]];
-  // in future, this should be combined with path finder
-  // remove 1 from the set of singularities and cast complex points to real plane
-  if pathfinder eq 1 then
-    avoid:=complexToPlane(Remove(sings,Index(sings,1)));
-  else 
-    avoid:=[];
-  end if;
-  path_before_loop_head:=findPath(avoid,V!0,loop_head[1]);
-  path_end:=[V![1,0]];
-  path:=path_before_loop_head cat loop_head[[2,3,4,5]] cat path_end;
-
-  // third entry records the position of the loop head
-  return path, avoid, #path_before_loop_head;
-end intrinsic;
-
-
 intrinsic multiply(A::Any,B::Any) -> Any
 {
   Try computing A*B by coercing the coefficients of B into the ring of A and, if this fails, then the other way around.
@@ -2587,7 +2553,7 @@ intrinsic UpdateIntegrationPath(X,family_number : pathfinder:=1)
   def:=X`deformation;
   odes:=X`odes[number];
   f0:=def[number]; f1:=def[number+1];
-  integrationPath,avoid,loop_position:=SetupIntegrationPath(f0,f1,pathfinder);
+  integrationPath,avoid:=SetupIntegrationPath(f0,f1,pathfinder);
   for i in [1..#odes] do
     ode_filename:="IVP-"*suffix(number,#def-1)*"-"*suffix(i,#odes)*".sage";
     WriteInsideTempFolder(ode_filename,"path="*Sprint(integrationPath):name:=X`name);
