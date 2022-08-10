@@ -1,6 +1,9 @@
 // a simple example
-f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
-
+SetViMode(true);
+Attach("suite.mag");
+R<x,y,z,w>:=PolynomialRing(Rationals(),4);
+//f:=5*x^4 - 4*x^2*z*w + 8*y^4 - 5*z^4 + 4*z*w^3;
+f:=3*x^3*z - 2*x^2*y^2 + x*z^3 - 8*y^4 - 8*w^4;
 // finding the ODEs for the periods
 time X:=PeriodHomotopy(f);
 // time X:=PeriodHomotopy(f : bound_pole_order:=false);
@@ -179,3 +182,13 @@ x^4 - 8*x^3*z + 9*y^3*w + 9*z^4 + w^4,
 -8*x^3*z + 9*y^3*w + 9*z^4 + w^4,
 -8*x^3*z - 8*x*y*z^2 + 9*y^3*w + 9*z^4 + w^4
 ];
+
+
+
+
+pow:=[ R.i^3 : i in [1..Ngens(R)]];
+mons:=[m : m in  MonomialsOfDegree(R,3) | Index(pow,m) eq 0];
+repeat 
+  rndm:=[mons[Random(1,#mons)] : i in [1..3]] cat pow;
+  f:=&+[ Random(1,10) * m : m in rndm] ;
+until isSmooth(f); // startup function
