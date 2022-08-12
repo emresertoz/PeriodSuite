@@ -1,33 +1,61 @@
-import os, sys, getopt
-import time
+import os, time
+import argparse
+import multiprocessing
+from ore_algebra import *
 
 # my functions
 from pathToSuite import *
 import input_output as io
 from fermat_periods import FermatPeriods
+from period_homotopy import InitialValueProblem
+
 
 #FIXME
 #temporarily a global variable
 has_loop=False
 
-############################################################
-# We retrieve the IVP directory here. 
+
+
+
 # This script must be called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
 #               sage integrator.sage --ivpdir="path/to/suite/ode_storage/incinerator/"
-import argparse
+# We retrieve the IVP directory here and assign it to ivpdir. 
 parser = argparse.ArgumentParser()
 parser.add_argument('ivpdir')
 ivpdir=parser.parse_args().ivpdir
-############################################################
-
-ncpus=100
-print("Beginning integration...")
-# ivpdir is defined above
-# meta stores global information, such as integration precision
+# meta.sage: stores global information, e.g., precision, fermat_type, reduce 
 load(ivpdir+"meta.sage")
-
-from ore_algebra import *
+# Get all the file paths for the individual IVPs from ivpdir
+ivp_paths=[]
+for file in os.listdir(ivpdir):
+    if file.startswith("IVP-") and file.endswith(".sage"):
+        ivp_paths.append(os.path.join(ivpdir,file))
+ivp_paths.sort()
+# setup notation to interpret the ivp files
 DOP, t, D = DifferentialOperators()
+# Read the ivp files and form the IVP objects
+ivps=[]
+for file in ivp_paths:
+    load(file)
+    ivps.append(InitialValueProblem(ode,init,path,precision,name=label))
+#Get CPU count
+ncpus=multiprocessing.cpu_count()
+print("Beginning integration...")
+
+#FIXME: For the heck of it
+t0=time.time()
+@parallel(ncpus=ncpus)
+def tms(ivp):
+    ivp.compute_transition_matrix()
+#FIXME: This is doing a lazy evaluation. Since tms are not accessed, the actual integration is not begun!
+for XX in tms(ivps[:1]):
+    print('hello')
+print("What: ", time.time()-t0)
+
+
+
+### OLD CODE
+
 
 bit_precision=ceil(log(10^(precision+10))/log(2))+100
 field=ComplexBallField(bit_precision)
@@ -35,7 +63,7 @@ field=ComplexBallField(bit_precision)
 @parallel(ncpus=ncpus)
 def integrate_ode(ode_label):
     load(ode_label)
-    tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=true)
+    tm=ode.numerical_transition_matrix(path, 10^(-precision), assume_analytic=True)
     print("ODE", label, "is complete. Max error: ", max(tm.apply_map(lambda x : x.diameter()).list()))
     M=Matrix(init)
     if not (M.base_ring() == Rationals() or M.base_ring() == Integers()):
