@@ -4,7 +4,7 @@ import time
 # my functions
 from pathToSuite import *
 import input_output as io
-import fermat_periods
+from fermat_periods import FermatPeriods
 
 #FIXME
 #temporarily a global variable
@@ -68,6 +68,7 @@ def construct_matrix(keys, dictionary):
     mat=Matrix([dat[0] for dat in data])
     err=Matrix([dat[1] for dat in data])
     return convert_to_matrix_with_error(mat,err)
+
 
 def compute_periods_of_fermat():
     print("Computing periods of Fermat")
@@ -141,7 +142,8 @@ for key in loop_keys: # TODO: this has to be rewritted
 
 # reduce is in the meta file. if true, then initial conditions are expressed in terms of periods of the Fermat hypersurface
 if reduce:
-    periods_of_fermat=compute_periods_of_fermat()
+    # d,fermat_type,precision : these come from meta.sage
+    periods_of_fermat=FermatPeriods(d,fermat_type,precision).approximate_period_matrix.change_ring(field)
 else:
     periods_of_fermat=1 #identity matrix
 

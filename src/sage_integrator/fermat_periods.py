@@ -1,5 +1,6 @@
 # Class to compute periods of Fermat type hypersurfaces in projective space
 import time
+from sage.all import *
 
 class FermatPeriods:
     def __init__(self,degree,coefficients,digit_precision):
@@ -12,8 +13,8 @@ class FermatPeriods:
         self.n = ZZ(len(coefficients)-2)
         self.coefs = coefficients
         self.R = PolynomialRing(QQ, self.n+2, 'x', order='degrevlex')
-        self.xi = exp(2*pi*I/d) #d-th root of unity
-        self.inverse_roots = [c**(-1/d) for c in coefficients[:-1]] + [(-c)**(-1/d) for c in coefficients[-1:]]
+        self.xi = exp(2*pi*I/self.d) #d-th root of unity
+        self.inverse_roots = [c**(-1/self.d) for c in coefficients[:-1]] + [(-c)**(-1/self.d) for c in coefficients[-1:]]
 
         self.bit_precision = ceil(digit_precision*log(10)/log(2))+50
         self.field = ComplexField(self.bit_precision)
