@@ -11,21 +11,13 @@ from fermat_periods import FermatPeriods
 has_loop=False
 
 ############################################################
-# We retrieve the IVP directory here. There is also a (currently) unusued timeout feature.
-
-# This script is called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
+# We retrieve the IVP directory here. 
+# This script must be called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
 #               sage integrator.sage --ivpdir="path/to/suite/ode_storage/incinerator/"
-
-# Parse the input configuration.
-opts, _ = getopt.getopt(sys.argv[1:], "", ["ivpdir=", "timeout="])
-for opt, arg in opts:
-    if opt == "--timeout":
-        timeout = eval(arg)
-    elif opt == "--ivpdir":
-        ivpdir = arg
-    else:
-        print("ERROR: Invalid option: {}".format(opt))
-        sys.exit(1)
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('ivpdir')
+ivpdir=parser.parse_args().ivpdir
 ############################################################
 
 ncpus=100
@@ -68,18 +60,6 @@ def construct_matrix(keys, dictionary):
     mat=Matrix([dat[0] for dat in data])
     err=Matrix([dat[1] for dat in data])
     return convert_to_matrix_with_error(mat,err)
-
-
-def compute_periods_of_fermat():
-    print("Computing periods of Fermat")
-    t0=time.time()
-    load(pathToSuite+"src/sage_integrator/fermat_periods.sage")
-    # fermat_type and the degree d of fermat are loaded from the file "meta.sage"
-    fermat_period_matrix=periods_of_fermat(fermat_type)
-    print("Fermat periods computed in", time.time() -t0, "seconds.")
-    fpm_rows=fermat_period_matrix.nrows()
-    fpm_cols=fermat_period_matrix.ncols()
-    return MatrixSpace(field,fpm_rows,fpm_cols)(fermat_period_matrix);
 
 #TODO Some of the dicts below maybe obsolete
 ## Transition matrices but without intermediate base changes

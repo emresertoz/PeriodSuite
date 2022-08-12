@@ -158,11 +158,11 @@ end procedure;
 
 
 // Manage sage subprocess calls.
-intrinsic CallIntegrator(ivpdir : extra_options:="", script_name:="src/sage_integrator/integrator.sage") -> RngIntElt
+intrinsic CallIntegrator(ivpdir : script_name:="src/sage_integrator/integrator.sage") -> RngIntElt
 	  {Manage sage subprocess calls.}
 	  
   print "\n\nStarting SageMath, this may take some time...\n\n";
-  cmd_string := Sprintf("%o --ivpdir=%o %o", PathToSuite()*script_name, ivpdir, extra_options);
+  cmd_string := Sprintf("%o %o", PathToSuite()*script_name, ivpdir);
   return System(Sprintf("$(which sage) %o", cmd_string));
 end intrinsic;
 
