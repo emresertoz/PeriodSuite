@@ -19,3 +19,4 @@ ode_storage/
 pathToSuite*
 *~
 *.sig
+src/sage_integrator/temp
