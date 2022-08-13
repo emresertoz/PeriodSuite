@@ -7,7 +7,7 @@ from ore_algebra import *
 from pathToSuite import *
 import input_output as io
 from fermat_periods import FermatPeriods
-from period_homotopy import InitialValueProblem
+from period_homotopy import *
 
 
 #FIXME
@@ -43,13 +43,23 @@ ncpus=multiprocessing.cpu_count()
 print("Beginning integration...")
 
 #FIXME: For the heck of it
+bit_precision=ceil((precision+10)*log(10)/log(2))+100
+field=ComplexBallField(bit_precision)
+
 t0=time.time()
 @parallel(ncpus=ncpus)
-def tms(ivp):
-    ivp.compute_transition_matrix()
-#FIXME: This is doing a lazy evaluation. Since tms are not accessed, the actual integration is not begun!
-for XX in tms(ivps[:1]):
-    print('hello')
+def holo_cont(ivp):
+    hc=ivp.holomorphic_continuation()
+    return [disassemble_cbf_matrix(hc),ivp.name]
+
+periods={}
+for solution in holo_cont(ivps):
+    label=solution[-1][-1]
+    period=reassemble_cbf_matrix(field,solution[-1][-2])
+    periods[label]=period
+print("What: ", time.time()-t0)
+print("What: ", time.time()-t0)
+print("What: ", time.time()-t0)
 print("What: ", time.time()-t0)
 
 
@@ -57,7 +67,7 @@ print("What: ", time.time()-t0)
 ### OLD CODE
 
 
-bit_precision=ceil(log(10^(precision+10))/log(2))+100
+bit_precision=ceil((precision+10)*log(10)/log(2))+100
 field=ComplexBallField(bit_precision)
 
 @parallel(ncpus=ncpus)
