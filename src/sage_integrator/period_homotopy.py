@@ -1,4 +1,3 @@
-
 from sage.all import *
 from ore_algebra import *
 # from sage.rings.integer_ring import * 
@@ -22,11 +21,30 @@ class InitialValueProblem:
         print("ODE", self.name, "is complete. Max error: ", max(self.transition_matrix.apply_map(lambda x : x.diameter()).list()))
 
     def holomorphic_continuation(self):
+        """Return the value of the holomorphic vector valued function at the end of the path 
+        by holomorphic continuation. Assumes the ODE is smooth at the end of the path point 
+        (apparent singularities are also fine).
+        
+        If the ODE is singular at the end point, then the output has a different interpretation.
+        Use asymptotic_holomorphic_continuation instead.
+        """
         if not hasattr(self, 'transition_matrix'):
             self.compute_transition_matrix()
         M=self.inits.change_ring(self.field)
         return self.transition_matrix.row(0)*M
-
+    
+    def asymptotic_holomorphic_continuation(self):
+        """
+        Return the coordinates of the vector valued function at the end of the path in terms of the
+        Frobenius basis for the solution space of the ODE. 
+        
+        The output is a matrix, each column stores the coordinate in the solution space 
+        of the corresponding holomorphic coordinate function.
+        """
+        if not hasattr(self, 'transition_matrix'):
+            self.compute_transition_matrix()
+        M=self.inits.change_ring(self.field)
+        return self.transition_matrix*M
 
 def disassemble_cbf_matrix(cbf_matrix):
     """Take a CBF matrix and return the tuple consisting of
@@ -41,3 +59,4 @@ def reassemble_cbf_matrix(cb_field,disassembled_cbf_matrix):
     nrows = matrix.nrows()
     ncols = matrix.ncols()
     return Matrix(nrows,ncols, lambda i,j : matrix[i,j].add_error(errs[i,j]))
+
