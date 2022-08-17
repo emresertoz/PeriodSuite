@@ -7,7 +7,7 @@ from ore_algebra import *
 from pathToSuite import *
 import input_output as io
 from fermat_periods import FermatPeriods
-from period_homotopy import *
+from initial_value_problem import *
 
 # This script must be called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
 #               sage integrator.sage "path/to/suite/ode_storage/incinerator/"
@@ -41,7 +41,7 @@ DOP, t, D = DifferentialOperators()
 ivps=[]
 for file in ivp_paths:
     load(file)
-    ivps.append(InitialValueProblem(ode,init,path,precision,name=label))
+    ivps.append(InitialValueProblem(ode,init,path,precision,label))
 #Get CPU count
 
 ncpus=multiprocessing.cpu_count()
@@ -52,7 +52,7 @@ t0=time.time()
 @parallel(ncpus=ncpus)
 def holo_cont(ivp):
     hc=ivp.holomorphic_continuation()
-    return [disassemble_cbf_matrix(hc),ivp.name]
+    return [disassemble_cbf_matrix(hc),ivp.label]
 # the solution to our ivps are rows of period transition matrices
 rows_of_period_tms={}
 for solution in holo_cont(ivps):
