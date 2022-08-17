@@ -30,8 +30,8 @@ class InitialValueProblem:
         """
         if not hasattr(self, 'transition_matrix'):
             self.compute_transition_matrix()
-        M=self.inits.change_ring(self.field)
-        return self.transition_matrix.row(0)*M
+        inits=self.inits.change_ring(self.field)
+        return self.transition_matrix.row(0)*inits
     
     def asymptotic_holomorphic_continuation(self):
         """
@@ -43,8 +43,8 @@ class InitialValueProblem:
         """
         if not hasattr(self, 'transition_matrix'):
             self.compute_transition_matrix()
-        M=self.inits.change_ring(self.field)
-        return self.transition_matrix*M
+        inits=self.inits.change_ring(self.field)
+        return self.transition_matrix*inits
 
 def disassemble_cbf_matrix(cbf_matrix):
     """Take a CBF matrix and return the tuple consisting of
