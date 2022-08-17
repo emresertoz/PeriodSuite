@@ -4,16 +4,15 @@ from ore_algebra import *
 
 #TODO: make IVP take a field instead of precision? this way I don't have to create a field everytime ivp is called
 class InitialValueProblem:
-    def __init__(self,ode,inits,path,precision,label):
+    def __init__(self,ode,inits,path,precision,field,label):
         """Set-up the holomorphic continuation of a vector valued function whose
         entries are all annihilated by a single ordinary differential equation."""
         self.ode = ode # ordinary differential equation
         self.inits = Matrix(inits) # matrix of initial values, each column stores initial values of a complex valued function
         self.path = path # list of points describing a rectiliniear path in the complex plane for holomorphic continuation, inits are given at the first point
         self.precision = IntegerRing()(precision) # the number of digits of requested precision
+        self.field = field # complex ball field
         self.label = label # for sorting different IVPs
-        bit_precision=ceil((precision+10)*log(10)/log(2))+100
-        self.field=ComplexBallField(bit_precision)
 
     # this process should be parallelizable
     def compute_transition_matrix(self):
