@@ -19,7 +19,7 @@ from lmhs import *
 # ivpdir=parser.parse_args().ivpdir
 
 ####### Read-in files #######
-# meta.sage: stores global information, e.g., precision, fermat_type, reduce 
+# meta.sage: stores global information, e.g., degree, dimension, precision, fermat_type, reduce 
 load(ivpdir+"meta.sage")
 # Get all the file paths for the individual IVPs from ivpdir
 ivp_paths=[]
@@ -118,9 +118,16 @@ print("Computing monodromy")
 row_nums = sorted([j for i,j in labels if i == max_index])
 P1 = Matrix([rows1[(max_index,j)][0] for j in row_nums])
 P2 = Matrix([rows2[(max_index,j)][0] for j in row_nums])
-monod_float = P2.inverse()*P1
+monod_float = P1.inverse()*P2 # P2 = P1*monod
 monod = monod_float.apply_map(lambda x : round(x.mid().real()))
 monod_err = RealField(10)(max((monod_float - monod.change_ring(field)).apply_map(lambda x : abs(x.mid())).list()))
 print("Error in rounding the monodromy matrix to nearest integer matrix, check that this is small: ", monod_err)
 
-limit_periods = [limit_period_rows[(max_index,j)] for j in row_nums]
+logMon,unip,mult=logarithm_of_monodromy(monod)
+# dimension of hypersurface is read from meta.sage, this bounds the index of nilpotency of logMon and gives the correct degrees for the weight filtration (Schmid)
+W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension) 
+change_to_W_basis = W_matrix.change_ring(field).inverse() 
+
+expansions = lmhs.expansions_as_power_series()
+limit_periods = matrix([(matrix(expansions[j-1])*limit_period_rows[(max_index,j)]*change_to_W_basis)[0] for j in row_nums])
+

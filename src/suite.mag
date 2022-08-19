@@ -86,6 +86,7 @@ intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_i
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision) : name:=name);
   WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))   : name:=name);
+  WriteInsideTempFolder("meta.sage","dimension="*Sprint(Ngens(Parent(path[1]))-2)   : name:=name);
   WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)       : name:=name);
   
   if first_of_path_is_fermat then
