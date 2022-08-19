@@ -64,7 +64,7 @@ class LMHS:
         # print([ceil(max([s[1].n for sol in sols for s in sol if s[0] != 0])) for sols in expansions])
         return expansions, maxVal
 
-    def expansions_as_power_series(self, coef_ring = None):
+    def expansions_as_log_puiseux_series(self, coef_ring = None):
         """ Compute all expansions of odes at target point to sufficiently high valuation and then cast them to CC{{t}}[log(t)].  """
         expansions, maxVal = self.get_compatible_expansions()
         if coef_ring == None:
@@ -80,7 +80,16 @@ class LMHS:
             return S(sum(s[0]*t**(2*s[1].n)*L**(s[1].k) for s in sol))
         return [[convert(sol) for sol in sols] for sols in expansions]
 
-
+    def expansions_as_laurent_series(self,monodromy_mult, coef_ring = None):
+        """ Set log terms to zero and substitute t -> t^monodromy_mult to kill denominators of fractional powers of t. Returns a Laurent series."""
+        expansions, maxVal = self.get_compatible_expansions()
+        if coef_ring == None:
+            coef_ring = self.field
+        R = LaurentSeriesRing(coef_ring,'t',default_prec = maxVal+1)
+        t=R.gen();
+        def convert(sol):
+            return R(sum(s[0]*t**(monodromy_mult*s[1].n) for s in sol if s[1].k == 0))
+        return [[convert(sol) for sol in sols] for sols in expansions]
 
 #########################################
 ## Functions outside of the LMHS class ##

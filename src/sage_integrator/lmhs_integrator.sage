@@ -129,11 +129,19 @@ logMon,unip,mult=logarithm_of_monodromy(monod)
 W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension) 
 change_to_W_basis = W_matrix.change_ring(field).inverse() 
 
-expansions = lmhs.expansions_as_power_series()
+# expansions = lmhs.expansions_as_log_puiseux_series()
+expansions = lmhs.expansions_as_laurent_series(mult)
 limit_periods = matrix([(matrix(expansions[j-1])*limit_period_rows[(max_index,j)]*change_to_W_basis)[0] for j in row_nums])
 
 # get tthe dimensions of the pieces of the Hodge filtration
 fps = hodge_filtration_dimensions(dimension,degree)
+
+
+# for fp in fps:
+#     Fp = Matrix(limit_periods[:fp+1])
+
+
+
 
 # get the fps
 # set log to zero (why didn't I do this earlier? I guess to check with the other method?)
