@@ -21,6 +21,7 @@ from lmhs import *
 ####### Read-in files #######
 # meta.sage: stores global information, e.g., degree, dimension, precision, fermat_type, reduce 
 load(ivpdir+"meta.sage")
+degree = d
 # Get all the file paths for the individual IVPs from ivpdir
 ivp_paths=[]
 for file in os.listdir(ivpdir):
@@ -130,4 +131,13 @@ change_to_W_basis = W_matrix.change_ring(field).inverse()
 
 expansions = lmhs.expansions_as_power_series()
 limit_periods = matrix([(matrix(expansions[j-1])*limit_period_rows[(max_index,j)]*change_to_W_basis)[0] for j in row_nums])
+
+# get tthe dimensions of the pieces of the Hodge filtration
+fps = hodge_filtration_dimensions(dimension,degree)
+
+# get the fps
+# set log to zero (why didn't I do this earlier? I guess to check with the other method?)
+# make sure the ring is the LaurentSeriesRing and not the poly ring over it
+# then compute the 
+
 

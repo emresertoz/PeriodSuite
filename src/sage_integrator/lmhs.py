@@ -81,6 +81,44 @@ class LMHS:
         return [[convert(sol) for sol in sols] for sols in expansions]
 
 
+
+#########################################
+## Functions outside of the LMHS class ##
+#########################################
+
+def hirzebruch_series(d, prec = 10):
+    r"""
+    Return the generating series of the (primitive) Hodge numbers $h^{p,q}(d)-\delta_{p,q}$ of the middle cohomology of a smooth hypersurface of degree d, i.e., 
+     $\sum_{p,q \ge 0} (h^{p,q}(d)-\delta_{p,q}) x^py^q$.
+    """
+    R = PowerSeriesRing(QQ,['x','y'], default_prec = prec)
+    x,y = R.gens()
+    # In Arapura Alg Geo over C, Thm 17.3.4, this is attributed to Hirzebruch
+    return ((1+y)**(d-1) - (1+x)**(d-1))/((1+x)**d*y-(1+y)**d*x)
+
+def hodge_numbers(n,d):
+    r"""Return the primitive Hodge number $h^{p,n-p} - \delta_{p,n-p}$ of the middle cohomology of the projective hypersurface of dimension n and degree d."""
+    H = hirzebruch_series(d, prec = n+10)
+    cofs = H.coefficients()
+    R = parent(H); x,y = R.gens()
+    hp = []
+    for p in range(0,n+1):
+        q = n-p
+        if x**p*y**q in cofs.keys():
+            hp.append(cofs[x**p*y**q])
+        else:
+            hp.append(0)
+    return hp
+
+def hodge_filtration_dimensions(n,d):
+    """See hodge_numbers."""
+    hp = hodge_numbers(n,d)
+    fp = []
+    for ii in range(0,len(hp)):
+        fp.append(sum(hp[:ii+1]))
+    return fp
+
+
 def get_max_valuation_of_expansion(ode,point,order=None):
     """ Compute the smallest integer bounding the valuation of the coefficients of the series expansions. 
 
@@ -154,6 +192,5 @@ def weight_filtration_of_nilpotent_matrix(N,k):
             basis.append([Q.lift(q) for q in Q.basis()])
             
     return matrix(flatten(basis)), [W[a].dimension() for a in range(-1,2*k+1)]
-
 
 
