@@ -69,15 +69,11 @@ class LMHS:
         expansions, maxVal = self.get_compatible_expansions()
         if coef_ring == None:
             coef_ring = self.field
-        # FIXME!!
-        # R = PuiseuxSeriesRing(coef_ring,'t',default_prec = maxVal+1)
-        R = LaurentSeriesRing(coef_ring,'t',default_prec = maxVal+1)
+        R = PuiseuxSeriesRing(coef_ring,'t',default_prec = maxVal+1)
         S = R['logt']
         t=R.gen(); L = S.gen();
         def convert(sol):
-            # FIXME!!!!!!!!!!
-            # return S(sum(s[0]*t**(s[1].n)*L**(s[1].k) for s in sol))
-            return S(sum(s[0]*t**(2*s[1].n)*L**(s[1].k) for s in sol))
+            return S(sum(s[0]*t**(s[1].n)*L**(s[1].k) for s in sol))
         return [[convert(sol) for sol in sols] for sols in expansions]
 
     def expansions_as_laurent_series(self,monodromy_mult, coef_ring = None):
@@ -85,11 +81,12 @@ class LMHS:
         expansions, maxVal = self.get_compatible_expansions()
         if coef_ring == None:
             coef_ring = self.field
-        R = LaurentSeriesRing(coef_ring,'t',default_prec = maxVal+1)
+        prec = maxVal*monodromy_mult+1
+        R = LaurentSeriesRing(coef_ring,'t',default_prec = prec+1)
         t=R.gen();
         def convert(sol):
             return R(sum(s[0]*t**(monodromy_mult*s[1].n) for s in sol if s[1].k == 0))
-        return [[convert(sol) for sol in sols] for sols in expansions]
+        return [[convert(sol) + O(t**prec) for sol in sols] for sols in expansions]
 
 #########################################
 ## Functions outside of the LMHS class ##
@@ -203,3 +200,59 @@ def weight_filtration_of_nilpotent_matrix(N,k):
     return matrix(flatten(basis)), [W[a].dimension() for a in range(-1,2*k+1)]
 
 
+def clean_complex_ball(cb):
+    a = cb.real(); b= cb.imag(); II = cb.parent().gens()[0]
+    a = 0 if (0 in a) else a
+    b = 0 if (0 in b) else b
+    return a + II*b
+
+def clean_cb_series(cb_series, parent=None):
+    v = valuation(cb_series); 
+    if parent == None:
+        parent = cb_series.parent();
+    t = parent.gens()[0]
+    clean_series = parent([clean_complex_ball(l) for l in cb_series.list()])*t**v
+    trunc = cb_series.prec()
+#     print("What did the trunc say?", trunc)
+    if trunc < Infinity:
+        return clean_series + O(t**trunc)
+    else:
+        return clean_series
+#     return parent([clean_complex_ball(l) for l in cb_series.list()])*t^v+O(t^trunc)
+
+def clean_cbs_matrix(M, parent=None):
+    return M.apply_map(lambda m : clean_cb_series(m,parent=parent))
+
+def truncate_cbs_matrix(M,truncate_degree):
+    R = M.base_ring()
+    t = R.gens()[0]
+    return M.apply_map(lambda m : m + O(t**truncate_degree))
+
+import operator
+import time
+def min_val_of_maximal_minors(M):
+    m = M.nrows(); n = M.ncols()
+    if m > n:
+        raise ValueError("The input matrix should have at least as many columns as rows.")
+
+    cols = M.columns()
+    smallest_val = Infinity
+    index_of_smallest_val = None
+    for s in Subsets(range(n),m):
+        t0 = time.time()
+        val = clean_cb_series(Matrix(operator.itemgetter(*s)(cols)).det()).valuation()
+        print("A minor computed in ",time.time()-t0," seconds. Valuation:", val)
+        if val < smallest_val:
+            smallest_val = val
+            index_of_smallest_val = s
+    return smallest_val, index_of_smallest_val
+
+def submatrix_from_column_indices(M,indcs):
+    return Matrix(operator.itemgetter(*indcs)(M.columns())).transpose()
+    
+def submatrix_from_row_indices(M,indcs):
+    return Matrix(operator.itemgetter(*indcs)(M.rows()))
+    
+def invert_cbs_matrix(M):
+    detM=clean_cb_series(M.det()) #crucial to clean essentially zero coefs before inversion
+    return clean_cbs_matrix((1/detM)*M.adjugate())
