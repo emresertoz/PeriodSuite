@@ -6,17 +6,20 @@ from ore_algebra import *
 # my functions
 from pathToSuite import *
 import input_output as io
-from fermat_periods import FermatPeriods
+from fermat_periods import *
 from initial_value_problem import *
 from lmhs import *
+from monodromy import *
 
-# # FIXME: uncomment this 
-# # This script must be called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
-# #               sage integrator.sage "path/to/suite/ode_storage/incinerator/"
-# # We retrieve the IVP directory here and assign it to ivpdir. 
-# parser = argparse.ArgumentParser()
-# parser.add_argument('ivpdir')
-# ivpdir=parser.parse_args().ivpdir
+# This script can be called by specifying the location of the initial value problems (IVPs = ODE + initial conditions etc.) like so:
+#               sage integrator.sage "path/to/suite/ode_storage/incinerator/"
+# We retrieve the IVP directory here and assign it to ivpdir. 
+# Alternatively, this script can be called from an interactive environement where ivpdir is already defined.
+try: ivpdir
+except NameError: 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('ivpdir')
+    ivpdir=parser.parse_args().ivpdir
 
 ####### Read-in files #######
 # meta.sage: stores global information, e.g., degree, dimension, precision, fermat_type, reduce 
