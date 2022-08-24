@@ -34,6 +34,7 @@ class LMHS:
         ode = ivp.ode
         # marked path will give a seqence of 3 transition matrices
         T=ode.numerical_transition_matrix(self.marked_path,10**(-ivp.precision),assume_analytic=True)
+        print("ODE", ivp.label, "is complete. Max error: ", max(T[-1][-1].apply_map(lambda x : x.diameter()).list()))
         T=[t[1].change_ring(self.field) for t in T]
         M=LocalMonodromy(ode,end_point,self.field).monodromy
         inits=ivp.inits.change_ring(self.field)
