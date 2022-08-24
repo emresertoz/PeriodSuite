@@ -1513,14 +1513,14 @@ function SingularLocusInFamily(f0,f1)
     return polys;
 end function;
 
-intrinsic SolveIVPs(name::MonStgElt) -> Any
+intrinsic SolveIVPs(name::MonStgElt : lmhs:=false) -> Any
 {
   Takes as input the name of the initial value problems which have been saved in storage directory and integrates them.
 }
 
   bundle:=LoadBundle(name : withPeriods:=false);
 
-  return SolveIVPs(bundle);
+  return SolveIVPs(bundle : lmhs:=lmhs);
 
 end intrinsic;
 
