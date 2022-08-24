@@ -89,7 +89,7 @@ for ii in family_indices:
 # reverse the order in which these appear in the lists
 base_changes.reverse(); period_tms.reverse()
 master_transition_matrix=prod(B*P for B,P in zip(base_changes,period_tms))
-periods_of_fermat=FermatPeriods(d,fermat_type,precision).approximate_period_matrix.change_ring(field)
+periods_of_fermat=FermatPeriods(degree_of_hypersurface,fermat_type,precision).approximate_period_matrix.change_ring(field)
 # periods: this contains the periods of the target hypersurface
 periods=master_transition_matrix*periods_of_fermat
 # writing the period matrix to file

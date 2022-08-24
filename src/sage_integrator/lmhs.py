@@ -28,23 +28,53 @@ class LMHS:
         a = path[-2]; b=path[-1]; # penultimate and ultimate points
         self.marked_path = path[:-2] + [[a],[b],[a]]
 
+
 # this must be done in parallel
     def integrate_ivp_with_loop(self,ivp):
-        end_point = self.path[-1]
+        path = ivp.path
+        path0 = path[:-1] # the path until penultimate point (note: [0] is an acceptable path, if it comes to that)
+        path1 = path[-2:] # the last bit of the path
+        path2 = [path[-1],path[-2]] # the last bit but in reverse
         ode = ivp.ode
-        # marked path will give a seqence of 3 transition matrices
-        T=ode.numerical_transition_matrix(self.marked_path,10**(-ivp.precision),assume_analytic=True)
-        print("ODE", ivp.label, "is complete. Max error: ", max(T[-1][-1].apply_map(lambda x : x.diameter()).list()))
-        T=[t[1].change_ring(self.field) for t in T]
+        T0 = ode.numerical_transition_matrix(path0,10**(-ivp.precision),assume_analytic=True) 
+        T1 = ode.numerical_transition_matrix(path1,10**(-ivp.precision),assume_analytic=True) 
+        T2 = ode.numerical_transition_matrix(path2,10**(-ivp.precision),assume_analytic=True) 
+        err0 = max(T0.apply_map(lambda x : x.diameter()).list())
+        err1 = max(T1.apply_map(lambda x : x.diameter()).list())
+        err2 = max(T2.apply_map(lambda x : x.diameter()).list())
+        print("ODE", ivp.label, "is complete. Max error: ", max(err0,err1,err2))
+        T0 = T0.change_ring(self.field)
+        T1 = T1.change_ring(self.field)
+        T2 = T2.change_ring(self.field)
+        end_point = self.path[-1]
         M=LocalMonodromy(ode,end_point,self.field).monodromy
         inits=ivp.inits.change_ring(self.field)
-# take the output matrices: T0, T1, T2 and the local monodromy M
-# hit each of these below with *inits* (later we will multiply with the initial period matrix)
-    # T1[0], T2, ((T3*T2.inverse())*M*T2)[0]
+# take the output matrices: T0, T1, T2 and the local monodromy M, compute
+    # T0[0], T1*T0, (T2*M*T1*T0)[0]
+# then hit each of these with *inits* (later we will multiply with the initial period matrix)
     # this gives you perids at penultimate, ultimate, and penultimate after monodromy
     # the one at ultimate needs all of the coordinates, so we keep all the matrix
-        newT=[T[0][0],T[1],(T[2]*T[1].inverse()*M*T[1]*T[0].inverse())[0]]
+        newT = [T0[0], T1*T0, (T2*M*T1*T0)[0]]
         return [t*inits*self.initial_periods for t in newT]
+
+# FIXME: This old version is depreciated
+# # this must be done in parallel
+#     def integrate_ivp_with_loop(self,ivp):
+#         end_point = self.path[-1]
+#         ode = ivp.ode
+#         # marked path will give a seqence of 3 transition matrices
+#         T=ode.numerical_transition_matrix(self.marked_path,10**(-ivp.precision),assume_analytic=True)
+#         print("ODE", ivp.label, "is complete. Max error: ", max(T[-1][-1].apply_map(lambda x : x.diameter()).list()))
+#         T=[t[1].change_ring(self.field) for t in T]
+#         M=LocalMonodromy(ode,end_point,self.field).monodromy
+#         inits=ivp.inits.change_ring(self.field)
+# # take the output matrices: T0, T1, T2 and the local monodromy M
+# # hit each of these below with *inits* (later we will multiply with the initial period matrix)
+#     # T1[0], T2, ((T3*T2.inverse())*M*T2)[0]
+#     # this gives you perids at penultimate, ultimate, and penultimate after monodromy
+#     # the one at ultimate needs all of the coordinates, so we keep all the matrix
+#         newT=[T[0][0],T[1],(T[2]*T[1].inverse()*M*T[1]*T[0].inverse())[0]]
+#         return [t*inits*self.initial_periods for t in newT]
 
     def get_compatible_expansions(self):
         """For the list of odes, increase the order of expansion at target point so that the maximal valuations match, and return these expansions."""

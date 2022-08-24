@@ -85,8 +85,8 @@ intrinsic WriteMetaFile(name, precision, path, reduce_initials : first_of_path_i
 { Writes the meta file in the initial value problem directory.}
 
   WriteInsideTempFolder("meta.sage","precision="*Sprint(precision) : name:=name);
-  WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1]))   : name:=name);
-  WriteInsideTempFolder("meta.sage","dimension="*Sprint(Ngens(Parent(path[1]))-2)   : name:=name);
+  WriteInsideTempFolder("meta.sage","degree_of_hypersurface="*Sprint(Degree(path[1]))   : name:=name);
+  WriteInsideTempFolder("meta.sage","dimension_of_hypersurface="*Sprint(Ngens(Parent(path[1]))-2)   : name:=name);
   WriteInsideTempFolder("meta.sage","steps="*Sprint(#path-1)       : name:=name);
   
   if first_of_path_is_fermat then
@@ -1415,15 +1415,10 @@ intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, b
   CheckIfIVPDirectoryExists(name, ivpdir, overwrite);
 
   WriteMetaFile(name, precision, path, reduce_initials : first_of_path_is_fermat:=true);
-  /* WriteInsideTempFolder("meta.sage","precision="*Sprint(precision):name:=name); */
-  /* WriteInsideTempFolder("meta.sage","d="*Sprint(Degree(path[1])):name:=name); */
-  /* WriteInsideTempFolder("meta.sage","fermat_type="*Sprint(Coefficients(path[1])):name:=name); */
-  /* WriteInsideTempFolder("meta.sage","reduce="*Sprint(reduce_initials):name:=name); */
   
   // either the right number of integrationPaths should be provided, or none at all
   if #integrationPaths eq 0 then integrationPaths:=[[] : i in [1..(#path-1)]]; end if;
   assert #integrationPaths eq #path-1; 
-
 
   target:=path[#path]; 
   target_is_smooth:=isSmooth(target);

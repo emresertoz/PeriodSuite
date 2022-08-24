@@ -24,7 +24,6 @@ except NameError:
 ####### Read-in files #######
 # meta.sage: stores global information, e.g., degree, dimension, precision, fermat_type, reduce 
 load(ivpdir+"meta.sage")
-degree = d
 # Get all the file paths for the individual IVPs from ivpdir
 ivp_paths=[]
 for file in os.listdir(ivpdir):
@@ -104,7 +103,7 @@ for ii in smooth_family_indices:
 base_changes = base_changes[:-1]
 base_changes.reverse(); period_tms.reverse()
 master_transition_matrix=prod(B*P for B,P in zip(base_changes,period_tms))
-periods_of_fermat=FermatPeriods(d,fermat_type,precision).approximate_period_matrix.change_ring(field)
+periods_of_fermat=FermatPeriods(degree_of_hypersurface,fermat_type,precision).approximate_period_matrix.change_ring(field)
 # periods: this contains the periods of the target hypersurface
 periods=master_transition_matrix*periods_of_fermat
 
@@ -145,15 +144,16 @@ print("Error in rounding the monodromy matrix to nearest integer matrix, check t
 
 logMon,unip,mult=logarithm_of_monodromy(monod)
 # dimension of hypersurface is read from meta.sage, this bounds the index of nilpotency of logMon and gives the correct degrees for the weight filtration (Schmid)
-W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension) 
+print("DEBUG", dimension_of_hypersurface)
+W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension_of_hypersurface) 
 change_to_W_basis = W_matrix.change_ring(field).inverse() 
 
 # expansions = lmhs.expansions_as_log_puiseux_series()
 expansions = lmhs.expansions_as_laurent_series(mult)
 limit_periods = matrix([(matrix(expansions[j-1])*limit_period_rows[(max_index,j)]*change_to_W_basis)[0] for j in row_nums])
 
-# get tthe dimensions of the pieces of the Hodge filtration
-Fp_dims = hodge_filtration_dimensions(dimension,degree)
+# get the dimensions of the pieces of the Hodge filtration (degree dimension are in meta.sage)
+Fp_dims = hodge_filtration_dimensions(dimension_of_hypersurface,degree_of_hypersurface)
 
 ##
 # Going to compute the Plücker coordinates of the Hodge flag in the limit as t->0
