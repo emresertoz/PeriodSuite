@@ -2,6 +2,7 @@
 #### https://gitlab.inria.fr/lairez/numperiods
 #### with the permission of Pierre Lairez
 
+from sage.all import *
 from sage.geometry.voronoi_diagram import VoronoiDiagram
 
 def simplest_gaussian_rational(r):
@@ -11,8 +12,11 @@ def simplest_gaussian_rational(r):
 # Takes a list of polynomials, and constructs a rectangular path from 0 to 1 avoiding
 # the (non 0 or 1) roots of the polynomials
 #
-# Returns the best expected path, as well as the list of singular points.
+# Returns the best expected path
 def voronoi_path(polylist):
+
+    if len(polylist) == 0:
+        return [0,1]
 
     R   = QQ
     pts = set()
@@ -27,13 +31,13 @@ def voronoi_path(polylist):
             p=P(p/s)
         if p(1) == 0:
             p=P(p/(s-1))
-        roots=[r[0] for r in p.roots(ring=ComplexField(300))]
+        roots=[r[0] for r in p.roots(ring=ComplexField(30))]
         pts = pts.union(set(simplest_gaussian_rational(r) for r in roots))
     
     pts.add((R(0),R(0)))
     pts.add((R(1),R(0)))
     if len(pts) == 2:
-        return [0,1], []
+        return [0,1]
 
     # Add a bounding box to discourage paths going in off directions
     [[pts.add((R(i),R(j))) for i in {-1,1}] for j in {-1,1}]
@@ -59,7 +63,7 @@ def voronoi_path(polylist):
                 u = v[0]+I*v[1]
                 gr.add_edge(pt, u, 1.0)
     
-    return gr.shortest_path(QQ(0), QQ(1), by_weight=True), pts
+    return gr.shortest_path(QQ(0), QQ(1), by_weight=True)
 
 
 ##########################3

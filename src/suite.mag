@@ -1387,7 +1387,7 @@ intrinsic HasAllPeriods(X::Rec) -> BoolElt
   end if;
 end intrinsic;
 
-intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=1, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
+intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_pole_order:=true, randomizePath:=true, pathfinder:=0, reduce_initials:=true, name:="", overwrite:=false, integrate:=true) -> Any
 { Computes the periods of the hypersurface Z(f). }
 
   if straight then
@@ -1399,7 +1399,7 @@ intrinsic PeriodHomotopy(f::RngMPolElt : precision:=100, straight:=false, bound_
   return PeriodHomotopy(path : precision:=precision, bound_pole_order:=bound_pole_order, pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite, integrate:=integrate);
 end intrinsic;
 
-intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=1, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
+intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
 {
   Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
 }

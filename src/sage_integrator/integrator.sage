@@ -49,8 +49,20 @@ for file in ivp_paths:
 ####### Reading files completed #######
 
 labels=sorted([ivp.label for ivp in ivps])
-max_index = max(i for i,j in labels)
+family_indices = set(sorted(i for i,j in labels))
 
+# voronoi paths
+# FIXME: get this out of here
+# TODO: Ideally, if there are no (non-apparent) singularities along [0,1] we should take the straigh path
+from voronoi_path import *
+P=PolynomialRing(Rationals(),'x')
+for ii in family_indices:
+    ivp_batch = [ivp for ivp in ivps if ivp.label[0] == ii]
+    polys = [ivp.ode.monic().denominator() for ivp in ivp_batch]
+    polys = [P(p) for p in polys if p != 1]
+    path = voronoi_path(polys)
+    for ivp in ivp_batch:
+        ivp.path = path
 
 #Get CPU count
 ncpus=multiprocessing.cpu_count()
@@ -69,7 +81,7 @@ print("Integration completed in",time.time()-t0,"seconds.")
 print("Now putting it all together ...")
 # reconstruct the period transition matrices from the rows
 period_tms=[]
-for ii in range(1,max_index+1):
+for ii in family_indices:
     row_nums = sorted([j for i,j in labels if i == ii])
     period_tms.append(Matrix([rows_of_period_tms[(ii,j)][0] for j in row_nums]))
 
