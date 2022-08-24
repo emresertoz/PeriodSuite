@@ -1543,11 +1543,11 @@ intrinsic SolveIVPs(bundle::Any : lmhs:=false) -> Any
     bundle:=PrimitiveToComplete(bundle);
     bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
   else
-    bundle`loopBegins:=loadPeriods(ivpdir*"periods1");
-    // precision is worst at the end
-    bundle`loopEnds,bundle`precision:=loadPeriods(ivpdir*"periods2");
-    bundle`periods:=loadPeriods(ivpdir*"limit_periods");
+    // FIXME: this is just for a quick test, and is by no means complete (e.g. we also need weight filtration)
+    bundle`primitivePeriods,bundle`precision:=loadPeriods(ivpdir*"periods");
     bundle:=PrimitiveToComplete(bundle);
+    // FIXME: the line below needs to be changed
+    bundle`periods:=bundle`primitivePeriods*ChangeRing(bundle`primitiveToComplete,Parent(bundle`primitivePeriods[1,1]));
   end if;
 
   print "The periods are correct to "*Sprint(bundle`precision)*" digits.";
