@@ -140,11 +140,10 @@ P2 = Matrix([rows2[(max_index,j)][0] for j in row_nums])
 monod_float = P1.inverse()*P2 # P2 = P1*monod
 monod = monod_float.apply_map(lambda x : round(x.mid().real()))
 monod_err = RealField(10)(max((monod_float - monod.change_ring(field)).apply_map(lambda x : abs(x.mid())).list()))
-print("Error in rounding the monodromy matrix to nearest integer matrix, check that this is small: ", monod_err)
+print("The entries of the computed monodromy matrix and integers are this far apart: ", monod_err)
 
 logMon,unip,mult=logarithm_of_monodromy(monod)
 # dimension of hypersurface is read from meta.sage, this bounds the index of nilpotency of logMon and gives the correct degrees for the weight filtration (Schmid)
-print("DEBUG", dimension_of_hypersurface)
 W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension_of_hypersurface) 
 change_to_W_basis = W_matrix.change_ring(field).inverse() 
 
@@ -214,6 +213,9 @@ for fp in fps:
     Fp_matrices.append(newFp.apply_map(lambda l : l[0])) # l[0] is evaluation at 0
     print(f"Finding the limit of the flag of dimension {fp} is done in {time.time()-t1} seconds.")
 print(f"All limit flags are computed in {time.time()-t0} seconds.")
+
+#FIXME: temporary, writing the first interesting Fp for magma to read
+io.output_to_file(Fp_matrices[0],ivpdir+"periods")
 
 # TODO:
 # It might be preferable to have a single matrix whose first fp rows (for all p) store the p'th flag.
