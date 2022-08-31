@@ -134,7 +134,7 @@ def hirzebruch_series(d, prec = 10):
     return ((1+y)**(d-1) - (1+x)**(d-1))/((1+x)**d*y-(1+y)**d*x)
 
 def hodge_numbers(n,d):
-    r"""Return the primitive Hodge number $h^{p,n-p} - \delta_{p,n-p}$ of the middle cohomology of the projective hypersurface of dimension n and degree d."""
+    r"""Return the primitive Hodge numbers $h^{p,n-p} - \delta_{p,n-p}$ of the middle cohomology of the projective hypersurface of dimension n and degree d."""
     H = hirzebruch_series(d, prec = n+10)
     cofs = H.coefficients()
     R = parent(H); x,y = R.gens()
