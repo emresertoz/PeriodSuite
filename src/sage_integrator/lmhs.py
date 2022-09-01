@@ -273,7 +273,7 @@ def min_val_of_maximal_minors(M):
     for s in Subsets(range(n),m):
         t0 = time.time()
         val = clean_cb_series(Matrix(operator.itemgetter(*s)(cols)).det()).valuation()
-        print("A minor computed in ",time.time()-t0," seconds. Valuation:", val)
+        # print("A minor computed in ",time.time()-t0," seconds. Valuation:", val)
         if val < smallest_val:
             smallest_val = val
             index_of_smallest_val = s

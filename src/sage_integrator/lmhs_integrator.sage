@@ -160,6 +160,8 @@ Fp_dims = hodge_filtration_dimensions(dimension_of_hypersurface,degree_of_hypers
 
 # get rid of duplicate dimensions, 0, and the full space
 fps={fp for fp in Fp_dims if fp != 0 and fp != max(Fp_dims)}
+# sort and turn to sequence
+fps=sorted([fp for fp in fps])
 
 
 ######### preparing matrix for minor computation #########
