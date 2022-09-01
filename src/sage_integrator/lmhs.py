@@ -192,8 +192,9 @@ def logarithm_of_monodromy(T):
     unipotency=1
     while not poly.divides((varx**mult-1)**unipotency):
         unipotency +=1
-    logT=1/mult*sum([(-1)**(k+1)/k*(T**mult-1)**k for k in range(1,unipotency)])
-    return T.parent()(logT), unipotency, mult
+    logT=1/mult*sum([(1/RationalField()(k))*((-1)**(k+1))*(T**mult-1)**k for k in range(1,unipotency)])
+    # logT=1/mult*sum([(-1)**(k+1)/k*(T**mult-1)**k for k in range(1,unipotency)])
+    return logT, unipotency, mult
         
 def weight_filtration_of_nilpotent_matrix(N,k):
     """
