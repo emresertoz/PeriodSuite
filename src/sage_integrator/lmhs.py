@@ -198,9 +198,11 @@ def logarithm_of_monodromy(T):
         
 def weight_filtration_of_nilpotent_matrix(N,k):
     """
-    For N nilpotent matrix, k any positive integer such that N^(k+1) = 0, compute the weight filtration of Deligne and Schmid. 
+    For N nilpotent square matrix, k any positive integer such that N^(k+1) = 0, compute the weight filtration of Deligne and Schmid. 
 
     The changing k only shifts the indexing of the filtration.
+
+    We work with N acting on column vectors.
     """
     if not (k in PositiveIntegers()):
         raise ValueError("k must be a positive integer")
@@ -208,7 +210,8 @@ def weight_filtration_of_nilpotent_matrix(N,k):
         raise ValueError("N must be nilpotent with N^(k+1)=0")
 
     V = VectorSpace(QQ,N.ncols()) 
-    LN = linear_transformation(N)
+    # Our N acts on column vectors, linear_transformation considers the action on row vectors. Hence the transposition below.
+    LN = linear_transformation(N.transpose()) 
 
     # the order in which we will compute the weight filtration
     # we zigzag diagonally up and down on this table:
@@ -229,7 +232,7 @@ def weight_filtration_of_nilpotent_matrix(N,k):
             Q = W[a+1]/W[a]
             basis.append([Q.lift(q) for q in Q.basis()])
             
-    return matrix(flatten(basis)), [W[a].dimension() for a in range(-1,2*k+1)]
+    return matrix(flatten(basis)).transpose(), [W[a].dimension() for a in range(-1,2*k+1)]
 
 
 def clean_complex_ball(cb):
@@ -262,7 +265,10 @@ def truncate_cbs_matrix(M,truncate_degree):
 
 import operator
 import time
-def min_val_of_maximal_minors(M):
+def min_val_of_maximal_minors(M, lower_bound_on_valuation=0):
+    # returns the smallest valuation of maximal minors of M 
+    # if a lower bound is known and is achieved we stop early
+    # default lower bound is 0 for working with power series matrix
     m = M.nrows(); n = M.ncols()
     if m > n:
         raise ValueError("The input matrix should have at least as many columns as rows.")
@@ -277,6 +283,8 @@ def min_val_of_maximal_minors(M):
         if val < smallest_val:
             smallest_val = val
             index_of_smallest_val = s
+        if smallest_val == lower_bound_on_valuation:
+            break
     return smallest_val, index_of_smallest_val
 
 def submatrix_from_column_indices(M,indcs):

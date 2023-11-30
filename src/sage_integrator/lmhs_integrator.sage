@@ -104,17 +104,14 @@ base_changes = base_changes[:-1]
 base_changes.reverse(); period_tms.reverse()
 master_transition_matrix=prod(B*P for B,P in zip(base_changes,period_tms))
 periods_of_fermat=FermatPeriods(degree_of_hypersurface,fermat_type,precision).approximate_period_matrix.change_ring(field)
-# periods: this contains the periods of the target hypersurface
-periods=master_transition_matrix*periods_of_fermat
+# penultimate_periods: this contains the periods of the penultimate hypersurface
+penultimate_periods=master_transition_matrix*periods_of_fermat
 
 ## Major new part for LMHS
 print("Periods of the penultimate hypersurface computed. Now we turn to the final family of hypersurfaces.")
 
-# writing the period matrix to file
-# io.output_to_file(periods,ivpdir+"periods")
-
 final_ivps = [ivp for ivp in ivps if ivp.label[0] == max_index]
-lmhs = LMHS(final_ivps,periods)
+lmhs = LMHS(final_ivps, penultimate_periods)
 
 print("Final batch of integration begun...")
 t0=time.time()
@@ -145,7 +142,7 @@ print("The entries of the computed monodromy matrix and integers are this far ap
 logMon,unip,mult=logarithm_of_monodromy(monod)
 # dimension of hypersurface is read from meta.sage, this bounds the index of nilpotency of logMon and gives the correct degrees for the weight filtration (Schmid)
 W_matrix,W_dims = weight_filtration_of_nilpotent_matrix(logMon,dimension_of_hypersurface) 
-change_to_W_basis = W_matrix.change_ring(field).inverse() 
+change_to_W_basis = W_matrix.change_ring(field)
 
 # expansions = lmhs.expansions_as_log_puiseux_series()
 expansions = lmhs.expansions_as_laurent_series(mult)
@@ -209,10 +206,10 @@ for fp in fps:
     print(f"Inversion completed in {time.time()-t2} seconds.")
     newFp=clean_cbs_matrix(inv*Fp)
     if sum(newFp.apply_map(lambda l : l.valuation() < 0).list()) > 0:
-        print("Something is wrong. Let me know with your example.") 
+        print("Something is wrong. Email me your example.") 
         # Possibly lowPrec needs to be increased
         # go back to step 1 and increase precision
-    Fp_matrices.append(newFp.apply_map(lambda l : l[0])) # l[0] is evaluation at 0
+    Fp_matrices.append(newFp.apply_map(lambda l : l[0])) # l[0] is evaluation at t=0
     print(f"Finding the limit of the flag of dimension {fp} is done in {time.time()-t1} seconds.")
 print(f"All limit flags are computed in {time.time()-t0} seconds.")
 
