@@ -1401,7 +1401,7 @@ end intrinsic;
 
 intrinsic PeriodHomotopy(path::[RngMPolElt] : precision:=100, straight:=false, bound_pole_order:=true, pathfinder:=0, integrationPaths:=[], reduce_initials:=true,name:="",overwrite:=false,integrate:=true) -> Any
 {
-  Computes the periods of the hypersurface appearing as the last entry of "path". First all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
+  Computes the periods of the hypersurface appearing as the last entry of "path". First we compute all the periods of intermediate hypersurfaces in order to reach the target hypersurface.
 }
 
   if #path eq 1 then return PeriodHomotopy(path[1] : precision:=precision, straight:=straight, bound_pole_order:=bound_pole_order,pathfinder:=pathfinder, reduce_initials:=reduce_initials, name:=name, overwrite:=overwrite,integrate:=integrate); end if;
