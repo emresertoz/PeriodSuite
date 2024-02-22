@@ -2856,6 +2856,30 @@ intrinsic PolynomialsVanishingOnHodgeCycle(X::Rec, hodgeCycle::Any, degree::RngI
   return [HomogenizeCoordinate(Eltseq(k),working_precision) : k in Basis(K)];
 end intrinsic;
 
+intrinsic PolynomialsVanishingOnHodgeCycles(X::Rec, hodgeCycles::Any, degree::RngIntElt : working_precision:=Ceiling(X`precision*0.8)) -> Any
+{
+  Takes as input a Period bundle X, a list of Hodge cycles represented in the coordinates of the Hodge lattice of X, and the desired degree of polynomials "vanishing" on each of the Hodge cycles.
+}
+  precision:=Minimum(X`precision,2*working_precision);
+  P:=PeriodsOfHodgeCycles(X,hodgeCycles : precision:=precision);
+  M:=MultiplyAndReduce(X`equation,degree);
+  PM:=[P * ChangeRing(Transpose(m),ComplexField(precision)) : m in M];
+  // at this point we've lost some precision so we will use "epsilon" as cutoff for zero
+  epsilon:=10^-(Floor(working_precision*0.9));
+  cleanPM:=[Matrix(Nrows(mat),Ncols(mat),[ComplexField(working_precision)| Abs(e) lt epsilon select 0 else e  : e in Eltseq(mat)]) : mat in PM];
+  mats:=[Matrix([mat[ii] : mat in cleanPM]) : ii in [1..#hodgeCycles]];
+  listOfEquations:=[];
+  for m in mats do
+    t0 := Cputime();
+    K:=Kernel(m); 
+    dimK:=Dimension(K);
+    t1 := Cputime();
+    print "There are "*Sprint(dimK)*" equations of degree "*Sprint(degree)*" vanishing on current cycle. Time: "*Sprint(t1-t0);
+    listOfEquations cat:=[HomogenizeCoordinate(Eltseq(k),working_precision) : k in Basis(K)];
+  end for;
+  return listOfEquations;
+end intrinsic;
+
 
 intrinsic HomogenizeCoordinate(point::[FldElt],precision::RngIntElt) -> SeqEnum
 {
